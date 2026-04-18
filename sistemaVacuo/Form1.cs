@@ -52,5 +52,10 @@ namespace sistemaVacuo
         {
             Application.Exit();
         }
+
+        private void lblValvula_Click(object sender, EventArgs e)
+        {
+            // status de fechado ou aberto
+        }
     }
 }

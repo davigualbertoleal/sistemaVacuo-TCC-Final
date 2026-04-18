@@ -17,10 +17,11 @@
 
         private void InitializeComponent()
         {
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
             this.panel4 = new System.Windows.Forms.Panel();
+            this.label8 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.panel5 = new System.Windows.Forms.Panel();
@@ -45,7 +46,8 @@
             this.chart1 = new System.Windows.Forms.DataVisualization.Charting.Chart();
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
             this.panel4.SuspendLayout();
             this.panel5.SuspendLayout();
             this.panel6.SuspendLayout();
@@ -63,6 +65,18 @@
             this.panel4.Name = "panel4";
             this.panel4.Size = new System.Drawing.Size(911, 92);
             this.panel4.TabIndex = 3;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Nirmala UI", 20.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label8.ForeColor = System.Drawing.Color.Red;
+            this.label8.Location = new System.Drawing.Point(839, 26);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(35, 37);
+            this.label8.TabIndex = 1;
+            this.label8.Text = "X";
+            this.label8.Click += new System.EventHandler(this.label8_Click);
             // 
             // label2
             // 
@@ -121,9 +135,9 @@
             this.label6.ForeColor = System.Drawing.SystemColors.ControlLightLight;
             this.label6.Location = new System.Drawing.Point(17, 111);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(114, 33);
+            this.label6.Size = new System.Drawing.Size(165, 33);
             this.label6.TabIndex = 6;
-            this.label6.Text = "65.0 °C";
+            this.label6.Text = "65.0 MBarr";
             // 
             // label5
             // 
@@ -132,9 +146,9 @@
             this.label5.ForeColor = System.Drawing.SystemColors.ControlLightLight;
             this.label5.Location = new System.Drawing.Point(15, 38);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(114, 33);
+            this.label5.Size = new System.Drawing.Size(165, 33);
             this.label5.TabIndex = 4;
-            this.label5.Text = "65.0 °C";
+            this.label5.Text = "65.0 MBarr";
             // 
             // lblTempoAtuacao
             // 
@@ -175,6 +189,8 @@
             // 
             this.panel6.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
             this.panel6.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel6.Controls.Add(this.label10);
+            this.panel6.Controls.Add(this.label9);
             this.panel6.Controls.Add(this.lblValvula);
             this.panel6.Controls.Add(this.lblAquecedorStatus);
             this.panel6.Controls.Add(this.lblAquecedor);
@@ -194,11 +210,12 @@
             this.lblValvula.AutoSize = true;
             this.lblValvula.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblValvula.ForeColor = System.Drawing.Color.DarkGray;
-            this.lblValvula.Location = new System.Drawing.Point(20, 290);
+            this.lblValvula.Location = new System.Drawing.Point(17, 267);
             this.lblValvula.Name = "lblValvula";
-            this.lblValvula.Size = new System.Drawing.Size(91, 15);
+            this.lblValvula.Size = new System.Drawing.Size(100, 15);
             this.lblValvula.TabIndex = 8;
-            this.lblValvula.Text = "Válvula: ABERTA";
+            this.lblValvula.Text = "Válvula 1: ABERTA";
+            this.lblValvula.Click += new System.EventHandler(this.lblValvula_Click);
             // 
             // lblAquecedorStatus
             // 
@@ -315,26 +332,26 @@
             // chart1
             // 
             this.chart1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
-            chartArea1.AxisX.LabelStyle.ForeColor = System.Drawing.Color.DarkGray;
-            chartArea1.AxisX.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            chartArea1.AxisX.MajorGrid.LineColor = System.Drawing.Color.Transparent;
-            chartArea1.AxisY.LabelStyle.ForeColor = System.Drawing.Color.DarkGray;
-            chartArea1.AxisY.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            chartArea1.AxisY.MajorGrid.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
-            chartArea1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
-            chartArea1.Name = "ChartArea1";
-            this.chart1.ChartAreas.Add(chartArea1);
-            legend1.Enabled = false;
-            legend1.Name = "Legend1";
-            this.chart1.Legends.Add(legend1);
+            chartArea2.AxisX.LabelStyle.ForeColor = System.Drawing.Color.DarkGray;
+            chartArea2.AxisX.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            chartArea2.AxisX.MajorGrid.LineColor = System.Drawing.Color.Transparent;
+            chartArea2.AxisY.LabelStyle.ForeColor = System.Drawing.Color.DarkGray;
+            chartArea2.AxisY.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            chartArea2.AxisY.MajorGrid.LineColor = System.Drawing.Color.FromArgb(((int)(((byte)(40)))), ((int)(((byte)(40)))), ((int)(((byte)(40)))));
+            chartArea2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(20)))), ((int)(((byte)(20)))));
+            chartArea2.Name = "ChartArea1";
+            this.chart1.ChartAreas.Add(chartArea2);
+            legend2.Enabled = false;
+            legend2.Name = "Legend1";
+            this.chart1.Legends.Add(legend2);
             this.chart1.Location = new System.Drawing.Point(4, 161);
             this.chart1.Name = "chart1";
-            series1.ChartArea = "ChartArea1";
-            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
-            series1.Color = System.Drawing.Color.White;
-            series1.Legend = "Legend1";
-            series1.Name = "Series1";
-            this.chart1.Series.Add(series1);
+            series2.ChartArea = "ChartArea1";
+            series2.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
+            series2.Color = System.Drawing.Color.White;
+            series2.Legend = "Legend1";
+            series2.Name = "Series1";
+            this.chart1.Series.Add(series2);
             this.chart1.Size = new System.Drawing.Size(465, 181);
             this.chart1.TabIndex = 2;
             this.chart1.Text = "chart1";
@@ -346,9 +363,9 @@
             this.label4.ForeColor = System.Drawing.SystemColors.ControlLightLight;
             this.label4.Location = new System.Drawing.Point(3, 36);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(240, 66);
+            this.label4.Size = new System.Drawing.Size(334, 66);
             this.label4.TabIndex = 1;
-            this.label4.Text = "67.6 PA";
+            this.label4.Text = "67.6 MBarr";
             // 
             // label3
             // 
@@ -361,17 +378,27 @@
             this.label3.TabIndex = 1;
             this.label3.Text = "Pressão Absoluta do Tanque";
             // 
-            // label8
+            // label9
             // 
-            this.label8.AutoSize = true;
-            this.label8.Font = new System.Drawing.Font("Nirmala UI", 20.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label8.ForeColor = System.Drawing.Color.Red;
-            this.label8.Location = new System.Drawing.Point(839, 26);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(35, 37);
-            this.label8.TabIndex = 1;
-            this.label8.Text = "X";
-            this.label8.Click += new System.EventHandler(this.label8_Click);
+            this.label9.AutoSize = true;
+            this.label9.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label9.ForeColor = System.Drawing.Color.DarkGray;
+            this.label9.Location = new System.Drawing.Point(17, 291);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(100, 15);
+            this.label9.TabIndex = 9;
+            this.label9.Text = "Válvula 2: ABERTA";
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label10.ForeColor = System.Drawing.Color.DarkGray;
+            this.label10.Location = new System.Drawing.Point(17, 316);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(100, 15);
+            this.label10.TabIndex = 10;
+            this.label10.Text = "Válvula 3: ABERTA";
             // 
             // Form1
             // 
@@ -430,5 +457,7 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label label9;
     }
 }
