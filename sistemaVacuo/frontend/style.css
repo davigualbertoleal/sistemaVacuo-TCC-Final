@@ -1,0 +1,210 @@
+/* RESET E FUNDO */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #0a0a0a; /* Fundo exato do Forms */
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 40px; /* Espaçamento das bordas da tela */
+}
+
+/* DATA NO TOPO DIREITO */
+.top-info {
+    text-align: right;
+    color: #5a5a5a;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* PAINÉIS GERAIS (O estilo "FixedSingle" do Forms) */
+.panel {
+    background-color: #141414; /* Cor exata dos painéis */
+    border: 1px solid #333333;
+}
+
+/* PANEL 4 (CABEÇALHO) */
+.header-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    margin-bottom: 20px;
+}
+
+.header-title {
+    font-family: 'Tahoma', sans-serif;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* =========================================
+   O NOVO BOTÃO 'X' BONITÃO
+========================================= */
+.btn-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff4d4d;
+    background-color: rgba(255, 77, 77, 0.1);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .btn-close:hover {
+        background-color: #ff4d4d;
+        color: #ffffff;
+        box-shadow: 0 0 15px rgba(255, 77, 77, 0.4);
+        transform: scale(1.05);
+    }
+
+/* ESTRUTURA DOS 3 PAINÉIS INFERIORES */
+.dashboard-grid {
+    display: grid;
+    /* Mantém a proporção exata: estreito - largo - estreito */
+    grid-template-columns: 250px 1fr 250px;
+    gap: 20px;
+    flex: 1; /* Faz o grid ocupar o resto da tela */
+}
+
+/* PANEL 6 (ESQUERDA - STATUS) */
+.left-panel {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.status-label {
+    color: darkgray;
+    font-size: 14px;
+}
+
+.status-value {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.on {
+    color: limegreen;
+}
+
+.auto {
+    color: gold;
+}
+
+.valves-container {
+    margin-top: auto; /* Joga as válvulas lá pro fundo do painel */
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.valve-item {
+    color: darkgray;
+    font-size: 13px;
+}
+
+/* PANEL 7 (MEIO - GRÁFICO) */
+.center-panel {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-header {
+    margin-bottom: 15px;
+}
+
+.chart-title {
+    color: #5a5a5a;
+    font-size: 16px;
+}
+
+.chart-main-value {
+    font-size: 48px;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.chart-meta {
+    color: darkgray;
+    font-size: 14px;
+}
+
+.chart-container {
+    flex: 1;
+    position: relative;
+    width: 100%;
+}
+
+/* =========================================
+   PAINEL DA DIREITA ARRUMADO (Sem espação)
+========================================= */
+.right-panel {
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 45px;
+    justify-content: flex-start;
+}
+
+.info-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-label {
+    color: darkgray;
+    font-size: 14px;
+}
+
+.info-value {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* =========================================
+   RESPONSIVIDADE (TABLETS E TELAS MENORES)
+========================================= */
+@media (max-width: 900px) {
+    body {
+        height: auto; /* Permite que a tela cresça para baixo */
+        overflow-y: auto; /* Volta a barra de rolagem se precisar */
+    }
+
+    .dashboard-grid {
+        /* Muda de 3 colunas para 1 coluna só (um embaixo do outro) */
+        grid-template-columns: 1fr;
+    }
+
+    .header-panel {
+        /* Centraliza o título se a tela for muito pequena */
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .chart-container {
+        /* Garante que o gráfico tenha uma altura mínima legal no celular/tablet */
+        min-height: 300px;
+    }
+}

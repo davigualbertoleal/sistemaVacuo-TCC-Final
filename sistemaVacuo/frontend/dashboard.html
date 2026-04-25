@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vácuo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="top-info" id="relogio">
+        TSEA Energy | Carregando...
+    </div>
+
+    <header class="panel header-panel">
+        <div class="header-title">Controle de Vácuo</div>
+        <div class="btn-close" id="btnFechar">X</div>
+    </header>
+
+    <main class="dashboard-grid">
+
+        <div class="panel left-panel">
+            <div class="status-item">
+                <span class="status-label">Bomba</span>
+                <span class="status-value on">LIGADO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Tubo 1</span>
+                <span class="status-value on">INSERIDO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Tubo 2</span>
+                <span class="status-value on">INSERIDO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Tubo 3</span>
+                <span class="status-value on">INSERIDO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Regulador 1</span>
+                <span class="status-value on">LIGADO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Regulador 2</span>
+                <span class="status-value on">LIGADO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Regulador 3</span>
+                <span class="status-value off">DESLIGADO</span>
+            </div>
+
+            <div class="valves-container">
+                <div class="valve-item">Válvula 1: ABERTA</div>
+                <div class="valve-item">Válvula 2: ABERTA</div>
+                <div class="valve-item">Válvula 3: ABERTA</div>
+            </div>
+        </div>
+
+        <div class="panel center-panel">
+            <div class="chart-header">
+                <div class="chart-title">Pressão Absoluta do Tanque</div>
+                <div class="chart-main-value">0.00 MBarr</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="vacuoChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <div class="info-block">
+                <span class="info-label">Pressão</span>
+                <span class="info-value">65.0 MBarr</span>
+            </div>
+            <div class="info-block">
+                <span class="info-label">Temp. de Óleo</span>
+                <span class="info-value">65.0°C</span>
+            </div>
+            <div class="info-block">
+                <span class="info-label">Tempo de Atuação</span>
+                <span class="info-value">94Min</span>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
