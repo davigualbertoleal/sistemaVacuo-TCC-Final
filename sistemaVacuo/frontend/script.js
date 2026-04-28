@@ -1,138 +1,168 @@
-// =============================================
-//  SISTEMA DE VÁCUO - script.js
-//  Recebe dados do ESP32 via C# e atualiza
-//  o dashboard em tempo real.
-// =============================================
+const MAX_PONTOS_GRAFICO = 30;
 
 // --- GRÁFICO DE PRESSÃO ---
-const MAX_PONTOS_GRAFICO = 20; // Quantos pontos o gráfico exibe ao mesmo tempo
-
 const ctx = document.getElementById('vacuoChart').getContext('2d');
 const vacuoChart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: [],
-        datasets: [{
-            label: 'Pressão (kPa)',
-            data: [],
-            borderColor: '#ffffff',
-            borderWidth: 3,
-            tension: 0.4,
-            pointRadius: 0
-        }]
+        datasets: [
+            {
+                label: 'Câmara (mBar)',
+                data: [],
+                borderColor: '#ff6b6b',
+                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true
+            },
+            {
+                label: 'Tubo 1 (mBar)',
+                data: [],
+                borderColor: '#4ecdc4',
+                backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true
+            },
+            {
+                label: 'Tubo 2 (mBar)',
+                data: [],
+                borderColor: '#ffe66d',
+                backgroundColor: 'rgba(255, 230, 109, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true
+            },
+            {
+                label: 'Tubo 3 (mBar)',
+                data: [],
+                borderColor: '#95e1d3',
+                backgroundColor: 'rgba(149, 225, 211, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true
+            }
+        ]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 300 }, // Animação suave a cada atualização
-        plugins: { legend: { display: false } },
+        animation: { duration: 300 },
+        plugins: {
+            legend: {
+                display: true,
+                labels: { color: '#999', font: { size: 11 } }
+            }
+        },
         scales: {
             x: {
                 grid: { display: false },
-                ticks: { color: 'darkgray' }
+                ticks: { color: '#666', font: { size: 10 } }
             },
             y: {
                 min: 0,
-                max: 200, // Ajuste conforme a faixa esperada do seu sistema
-                grid: { color: '#282828' },
-                ticks: { color: 'darkgray' }
+                max: 1000,
+                grid: { color: '#333' },
+                ticks: { color: '#666', font: { size: 10 } }
             }
         }
     }
 });
 
 // =============================================
-//  FUNÇÃO PRINCIPAL - Chamada pelo C# com os
-//  dados do ESP32 a cada 500ms
-//  Exemplo de chamada: atualizarDados({pressao:65.2, bomba:true, valvula:false, servo:90})
+//  FUNÇÃO PRINCIPAL
+//  Chamada pelo C# com dados do ESP32
 // =============================================
 function atualizarDados(dados) {
-    // --- Atualiza o valor principal de pressão ---
-    const pressaoFormatada = dados.pressao.toFixed(1);
-    document.querySelector('.chart-main-value').textContent = pressaoFormatada + ' kPa';
-    document.querySelector('.info-value').textContent = pressaoFormatada + ' kPa';
+    console.log("Atualizando com:", dados);
 
-    // --- Atualiza o gráfico ---
+    // --- VALOR PRINCIPAL DA CÂMARA (MBarr) ---
+    const pressaoFormatada = dados.pressaoCamaraMbar.toFixed(2);
+    document.querySelector('.chart-main-value').textContent = pressaoFormatada + ' MBarr';
+
+    // --- VALOR NO PAINEL DIREITO ---
+    const infoValues = document.querySelectorAll('.info-value');
+    if (infoValues.length > 0) {
+        infoValues[0].textContent = pressaoFormatada + ' MBarr';
+    }
+
+    // --- ATUALIZA O GRÁFICO ---
     const agora = horaAtual();
     vacuoChart.data.labels.push(agora);
-    vacuoChart.data.datasets[0].data.push(dados.pressao);
+    vacuoChart.data.datasets[0].data.push(dados.pressaoCamaraMbar);
+    vacuoChart.data.datasets[1].data.push(dados.pressaoTubo1Mbar);
+    vacuoChart.data.datasets[2].data.push(dados.pressaoTubo2Mbar);
+    vacuoChart.data.datasets[3].data.push(dados.pressaoTubo3Mbar);
 
-    // Remove pontos antigos para o gráfico não ficar infinito
+    // Remove pontos antigos
     if (vacuoChart.data.labels.length > MAX_PONTOS_GRAFICO) {
         vacuoChart.data.labels.shift();
-        vacuoChart.data.datasets[0].data.shift();
+        vacuoChart.data.datasets.forEach(ds => ds.data.shift());
     }
     vacuoChart.update();
 
-    // --- Atualiza status da Bomba ---
-    atualizarStatus('status-bomba', dados.bomba ? 'LIGADO' : 'DESLIGADO', dados.bomba);
+    // --- ATUALIZA STATUS NO PAINEL ESQUERDO ---
+    // Bomba
+    atualizarStatusItem(0, dados.bombaLigada ? 'LIGADO' : 'DESLIGADO');
 
-    // --- Atualiza status da Válvula ---
-    atualizarStatus('status-valvula', dados.valvula ? 'ABERTA' : 'FECHADA', dados.valvula);
+    // Tubos: mostra "INSERIDO" se tiver pressão, senão "VAZIO"
+    atualizarStatusItem(1, dados.pressaoTubo1Mbar > 50 ? 'INSERIDO' : 'VAZIO');
+    atualizarStatusItem(2, dados.pressaoTubo2Mbar > 50 ? 'INSERIDO' : 'VAZIO');
+    atualizarStatusItem(3, dados.pressaoTubo3Mbar > 50 ? 'INSERIDO' : 'VAZIO');
 
-    // --- Atualiza ângulo do servo ---
-    if (document.getElementById('info-servo')) {
-        document.getElementById('info-servo').textContent = dados.servo + '°';
-    }
+    // --- VÁLVULAS ---
+    atualizarValvulas(dados.valvulaAberta);
 
-    // --- Alerta visual se pressão cair muito (segurança) ---
+    // --- ALERTA VISUAL SE PRESSÃO ANORMAL ---
     const header = document.querySelector('.header-panel');
-    if (dados.pressao < 20) {
-        header.style.background = '#c0392b'; // Vermelho de alerta
+    if (dados.pressaoCamaraMbar < 20) {
+        header.style.background = 'linear-gradient(135deg, #c0392b 0%, #e74c3c 100%)';
         header.querySelector('.header-title').textContent = '⚠️ PRESSÃO CRÍTICA';
+    } else if (dados.pressaoCamaraMbar > 950) {
+        header.style.background = 'linear-gradient(135deg, #e67e22 0%, #f39c12 100%)';
+        header.querySelector('.header-title').textContent = '⚠️ PRESSÃO ALTA';
     } else {
         header.style.background = '';
         header.querySelector('.header-title').textContent = 'Controle de Vácuo';
     }
 }
 
-// Atualiza um elemento de status (LIGADO/DESLIGADO) por ID
-function atualizarStatus(id, texto, ativo) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = texto;
-    el.className = 'status-value ' + (ativo ? 'on' : 'off');
+// =============================================
+//  ATUALIZA UM STATUS NO PAINEL ESQUERDO
+//  índice 0 = Bomba, 1-3 = Tubos, 4-6 = Reguladores
+// =============================================
+function atualizarStatusItem(indice, novo_valor) {
+    const statusItems = document.querySelectorAll('.status-item');
+    if (statusItems[indice]) {
+        const statusValue = statusItems[indice].querySelector('.status-value');
+        statusValue.textContent = novo_valor;
+
+        // Muda cor: LIGADO/INSERIDO = verde (on), DESLIGADO/VAZIO = vermelho (off)
+        if (novo_valor === 'LIGADO' || novo_valor === 'INSERIDO') {
+            statusValue.className = 'status-value on';
+        } else {
+            statusValue.className = 'status-value off';
+        }
+    }
 }
 
 // =============================================
-//  CONTROLES DO DASHBOARD → manda comandos
-//  de volta pro ESP32 via C#
+//  ATUALIZA AS VÁLVULAS (ABERTA/FECHADA)
 // =============================================
+function atualizarValvulas(valvulaAberta) {
+    const valveItems = document.querySelectorAll('.valve-item');
+    const estado = valvulaAberta ? 'ABERTA' : 'FECHADA';
 
-// Ligue os botões do HTML com IDs "btnBomba" e "btnValvula"
-// O C# intercepta essas mensagens e envia pro ESP32 via Serial
-document.addEventListener('DOMContentLoaded', () => {
-    const btnBomba = document.getElementById('btnBomba');
-    if (btnBomba) {
-        btnBomba.addEventListener('click', () => {
-            const ligada = btnBomba.dataset.estado === 'on';
-            const novoComando = ligada ? 'bomba:off' : 'bomba:on';
-            btnBomba.dataset.estado = ligada ? 'off' : 'on';
-            // Envia mensagem pro C# no formato "cmd:bomba:on"
-            window.chrome.webview.postMessage('cmd:' + novoComando);
-        });
-    }
-
-    const btnValvula = document.getElementById('btnValvula');
-    if (btnValvula) {
-        btnValvula.addEventListener('click', () => {
-            const aberta = btnValvula.dataset.estado === 'on';
-            const novoComando = aberta ? 'valvula:off' : 'valvula:on';
-            btnValvula.dataset.estado = aberta ? 'off' : 'on';
-            window.chrome.webview.postMessage('cmd:' + novoComando);
-        });
-    }
-});
-
-// =============================================
-//  BOTÃO FECHAR
-// =============================================
-document.getElementById('btnFechar').addEventListener('click', function () {
-    const usuarioQuerSair = confirm("⚠️ ATENÇÃO: Tem certeza que deseja encerrar o Controle de Vácuo?");
-    if (usuarioQuerSair) {
-        window.chrome.webview.postMessage('fechar_app');
-    }
-});
+    valveItems.forEach((valve, index) => {
+        valve.textContent = `Válvula ${index + 1}: ${estado}`;
+        valve.style.color = valvulaAberta ? '#4ecdc4' : '#ff6b6b';
+    });
+}
 
 // =============================================
 //  RELÓGIO
@@ -150,9 +180,27 @@ function atualizarRelogio() {
     const mes = String(agora.getMonth() + 1).padStart(2, '0');
     const ano = String(agora.getFullYear()).slice(-2);
     const hora = horaAtual();
-    document.getElementById('relogio').innerText =
-        `TSEA Energy | ${dia}/${mes}/${ano} | ${hora}`;
+
+    const relogioEl = document.getElementById('relogio');
+    if (relogioEl) {
+        relogioEl.textContent = `TSEA Energy | ${dia}/${mes}/${ano} | ${hora}`;
+    }
 }
 
+// =============================================
+//  BOTÃO FECHAR
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const btnFechar = document.getElementById('btnFechar');
+    if (btnFechar) {
+        btnFechar.addEventListener('click', () => {
+            if (confirm('Tem certeza que deseja encerrar o sistema de vácuo?')) {
+                window.chrome.webview.postMessage('fechar_app');
+            }
+        });
+    }
+});
+
+// Atualiza relógio a cada segundo
 atualizarRelogio();
 setInterval(atualizarRelogio, 1000);

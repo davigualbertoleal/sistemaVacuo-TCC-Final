@@ -1,12 +1,12 @@
 ﻿// =============================================
-//  SISTEMA DE VÁCUO - Form1.cs (C#)
-//  Lê Serial do ESP32, salva no MySQL,
-//  e atualiza o dashboard HTML em tempo real.
+//  SISTEMA DE VÁCUO - Form1.cs (ADAPTADO)
+//  Usa HTTP/API ao invés de Serial
 // =============================================
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.IO.Ports;
+using System.Net.Http;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using MySql.Data.MySqlClient;
@@ -15,32 +15,29 @@ namespace sistemaVacuo
 {
     public partial class Form1 : Form
     {
-        // --- CONFIGURAÇÕES DA PORTA SERIAL ---
-        // Mude "COM3" para a porta que aparecer no Gerenciador de Dispositivos
-        // quando plugar o ESP32 (ex: COM4, COM5...)
-        private const string PORTA_SERIAL = "COM3";
-        private const int BAUD_RATE = 115200;
+        // --- API (ao invés de Serial) ---
+        private static HttpClient httpClient = new HttpClient();
+        private const string API_URL = "http://localhost:5000/api/leiturasSensores";
 
-        // --- CONFIGURAÇÕES DO MYSQL (XAMPP) ---
-        // Usuário padrão do XAMPP é "root" sem senha
+        // --- MYSQL (XAMPP) ---
         private const string CONN_STRING =
-            "Server=localhost;Database=sistema_vacuo;Uid=root;Pwd=;";
+            "Server=localhost;Database=ProcessoVacuo;Uid=root;Pwd=;";
 
-        private SerialPort portaSerial;
+        private Timer timerLeitura;
+        private int cicloAtualId = 1;
 
         public Form1()
         {
             InitializeComponent();
-
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
 
             InicializarWebView();
-            InicializarSerial();
+            InicializarTimer();
         }
 
         // =============================================
-        //  WEBVIEW - Carrega o dashboard HTML
+        //  WEBVIEW
         // =============================================
         private async void InicializarWebView()
         {
@@ -58,136 +55,210 @@ namespace sistemaVacuo
 
             if (mensagem == "fechar_app")
             {
+                FinalizarCiclo();
                 Application.Exit();
             }
-            // Comandos vindos dos botões do dashboard para o ESP32
-            else if (mensagem.StartsWith("cmd:"))
+            else if (mensagem == "iniciar_ciclo")
             {
-                string comando = mensagem.Substring(4); // ex: "bomba:on"
-                EnviarComandoEsp(comando);
+                IniciarNovoCiclo();
+            }
+            else if (mensagem == "parar_ciclo")
+            {
+                FinalizarCiclo();
             }
         }
 
         // =============================================
-        //  SERIAL - Inicializa e lê dados do ESP32
+        //  TIMER - Lê API a cada 1 segundo
         // =============================================
-        private void InicializarSerial()
+        private void InicializarTimer()
+        {
+            timerLeitura = new Timer();
+            timerLeitura.Interval = 1000; // 1 segundo
+            timerLeitura.Tick += (s, e) => LerDadosDaAPI();
+            timerLeitura.Start();
+        }
+
+        // =============================================
+        //  LÊ DADOS DA API
+        // =============================================
+        private async void LerDadosDaAPI()
         {
             try
             {
-                portaSerial = new SerialPort(PORTA_SERIAL, BAUD_RATE);
-                portaSerial.NewLine = "\n";           // JSON termina com \n no sketch
-                portaSerial.DataReceived += Serial_DataReceived;
-                portaSerial.Open();
+                HttpResponseMessage response = await httpClient.GetAsync(API_URL + "?limit=1");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync();
+
+                    // Parse JSON
+                    var dados = ParseJsonSimples(json);
+
+                    if (dados.Count > 0)
+                    {
+                        // Salva no banco (se quiser manter histórico)
+                        // SalvarNoMySql(json);
+
+                        // Atualiza dashboard
+                        AtualizarDashboard(json);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Erro ao abrir a porta serial {PORTA_SERIAL}:\n{ex.Message}\n\n" +
-                    "Verifique se o ESP32 está conectado e a porta está correta.",
-                    "Erro de Conexão Serial",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
+                Console.WriteLine($"Erro ao ler API: {ex.Message}");
             }
         }
 
-        // Chamado automaticamente quando o ESP32 envia uma linha
-        private void Serial_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        // =============================================
+        //  HELPER: Parse JSON simples
+        // =============================================
+        private Dictionary<string, object> ParseJsonSimples(string json)
         {
-            try
+            var dict = new Dictionary<string, object>();
+
+            // Remove [ ] se for array
+            json = json.Trim('[', ']');
+
+            // Se tem { }, remove
+            string conteudo = json.Trim('{', '}');
+            var pares = conteudo.Split(',');
+
+            foreach (var par in pares)
             {
-                string linha = portaSerial.ReadLine().Trim();
+                var kv = par.Split(':');
+                if (kv.Length < 2) continue;
 
-                // Ignora linhas que não são JSON
-                if (!linha.StartsWith("{")) return;
+                string chave = kv[0].Trim().Trim('"');
+                string valor = kv[1].Trim().Trim('"');
 
-                // Salva no banco de dados
-                SalvarNoBanco(linha);
-
-                // Atualiza o dashboard (precisa chamar na thread da UI)
-                this.Invoke((Action)(() =>
-                {
-                    AtualizarDashboard(linha);
-                }));
+                if (float.TryParse(valor, out float numVal))
+                    dict[chave] = numVal;
+                else if (valor == "true")
+                    dict[chave] = true;
+                else if (valor == "false")
+                    dict[chave] = false;
+                else
+                    dict[chave] = valor;
             }
-            catch { /* ignora erros de leitura parcial */ }
+
+            return dict;
         }
 
         // =============================================
-        //  MYSQL - Salva os dados recebidos
+        //  SALVAR NO MYSQL (opcional, se quiser manter histórico)
         // =============================================
-        private void SalvarNoBanco(string jsonBruto)
+        private void SalvarNoMySql(string jsonBruto)
         {
-            // Parse manual simples (evita dependência extra de JSON no C#)
-            // Para algo mais robusto, instale Newtonsoft.Json pelo NuGet
             try
             {
-                // Remove chaves e divide por vírgula
-                string conteudo = jsonBruto.Trim('{', '}');
-                var pares = conteudo.Split(',');
-
-                float pressao = 0;
-                bool bomba = false, valvula = false;
-                int servo = 0;
-
-                foreach (var par in pares)
-                {
-                    var kv = par.Split(':');
-                    if (kv.Length < 2) continue;
-                    string chave = kv[0].Trim().Trim('"');
-                    string valor = kv[1].Trim().Trim('"');
-
-                    if (chave == "pressao") float.TryParse(valor, out pressao);
-                    else if (chave == "bomba") bomba = valor == "true";
-                    else if (chave == "valvula") valvula = valor == "true";
-                    else if (chave == "servo") int.TryParse(valor, out servo);
-                }
+                var dados = ParseJsonSimples(jsonBruto);
 
                 using (var conn = new MySqlConnection(CONN_STRING))
                 {
                     conn.Open();
-                    var cmd = new MySqlCommand(
-                        "INSERT INTO leituras (pressao, bomba_ligada, valvula_aberta, servo_angulo, registrado_em) " +
-                        "VALUES (@p, @b, @v, @s, NOW())", conn);
 
-                    cmd.Parameters.AddWithValue("@p", pressao);
-                    cmd.Parameters.AddWithValue("@b", bomba);
-                    cmd.Parameters.AddWithValue("@v", valvula);
-                    cmd.Parameters.AddWithValue("@s", servo);
+                    var cmd = new MySqlCommand(
+                        @"INSERT INTO leiturasSensores 
+                        (cicloId, dataHora, estadoMaquina, 
+                         pressaoCamaraMbar, 
+                         pressaoTubo1Mbar, fluxoTubo1LPM,
+                         pressaoTubo2Mbar, fluxoTubo2LPM,
+                         pressaoTubo3Mbar, fluxoTubo3LPM)
+                        VALUES 
+                        (@ciclo, NOW(), @estado,
+                         @pCamara,
+                         @p1, @f1,
+                         @p2, @f2,
+                         @p3, @f3)", conn);
+
+                    cmd.Parameters.AddWithValue("@ciclo", dados.ContainsKey("cicloId") ? dados["cicloId"] : cicloAtualId);
+                    cmd.Parameters.AddWithValue("@estado", dados.ContainsKey("estadoMaquina") ? dados["estadoMaquina"] : "Desligado");
+                    cmd.Parameters.AddWithValue("@pCamara", dados.ContainsKey("pressaoCamaraMbar") ? dados["pressaoCamaraMbar"] : 0);
+                    cmd.Parameters.AddWithValue("@p1", dados.ContainsKey("pressaoTubo1Mbar") ? dados["pressaoTubo1Mbar"] : 0);
+                    cmd.Parameters.AddWithValue("@f1", dados.ContainsKey("fluxoTubo1LPM") ? dados["fluxoTubo1LPM"] : 0);
+                    cmd.Parameters.AddWithValue("@p2", dados.ContainsKey("pressaoTubo2Mbar") ? dados["pressaoTubo2Mbar"] : 0);
+                    cmd.Parameters.AddWithValue("@f2", dados.ContainsKey("fluxoTubo2LPM") ? dados["fluxoTubo2LPM"] : 0);
+                    cmd.Parameters.AddWithValue("@p3", dados.ContainsKey("pressaoTubo3Mbar") ? dados["pressaoTubo3Mbar"] : 0);
+                    cmd.Parameters.AddWithValue("@f3", dados.ContainsKey("fluxoTubo3LPM") ? dados["fluxoTubo3LPM"] : 0);
+
                     cmd.ExecuteNonQuery();
                 }
             }
-            catch { /* Banco offline, continua exibindo na tela */ }
+            catch { }
         }
 
         // =============================================
-        //  WEBVIEW - Manda o JSON pro JavaScript
+        //  WEBVIEW → JavaScript
         // =============================================
         private void AtualizarDashboard(string json)
         {
-            // Chama a função atualizarDados() que está no script.js
-            // passando o JSON direto como objeto JavaScript
+            // Se for array, pega o primeiro elemento
+            if (json.StartsWith("["))
+            {
+                json = json.Substring(1); // Remove [
+                int indexFechar = json.LastIndexOf("]");
+                json = json.Substring(0, indexFechar); // Remove ]
+            }
+
             string script = $"atualizarDados({json});";
             webView.CoreWebView2.ExecuteScriptAsync(script);
         }
 
         // =============================================
-        //  SERIAL - Envia comando para o ESP32
+        //  CICLOS DE PROCESSO
         // =============================================
-        private void EnviarComandoEsp(string comando)
+        private void IniciarNovoCiclo()
         {
-            if (portaSerial != null && portaSerial.IsOpen)
+            try
             {
-                portaSerial.WriteLine(comando);
+                using (var conn = new MySqlConnection(CONN_STRING))
+                {
+                    conn.Open();
+
+                    var cmd = new MySqlCommand(
+                        "INSERT INTO ciclosProcesso (operadorResponsavelId, status) " +
+                        "VALUES (NULL, 'Em Andamento')", conn);
+
+                    cmd.ExecuteNonQuery();
+
+                    cmd.CommandText = "SELECT LAST_INSERT_ID()";
+                    cicloAtualId = (int)(long)cmd.ExecuteScalar();
+
+                    MessageBox.Show($"Ciclo {cicloAtualId} iniciado!", "Ciclo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao iniciar ciclo: {ex.Message}");
             }
         }
 
-        // Fecha a porta serial ao fechar o app
+        private void FinalizarCiclo()
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(CONN_STRING))
+                {
+                    conn.Open();
+
+                    var cmd = new MySqlCommand(
+                        "UPDATE ciclosProcesso SET dataFim = NOW(), status = 'Concluído' " +
+                        "WHERE id = @id", conn);
+
+                    cmd.Parameters.AddWithValue("@id", cicloAtualId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
-            if (portaSerial != null && portaSerial.IsOpen)
-                portaSerial.Close();
+            timerLeitura?.Stop();
+            timerLeitura?.Dispose();
         }
     }
 }
