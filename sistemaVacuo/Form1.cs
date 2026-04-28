@@ -1,9 +1,4 @@
-﻿// =============================================
-//  SISTEMA DE VÁCUO - Form1.cs (ADAPTADO)
-//  Usa HTTP/API ao invés de Serial
-// =============================================
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
