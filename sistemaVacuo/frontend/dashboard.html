@@ -18,70 +18,302 @@
         <div class="btn-close" id="btnFechar">X</div>
     </header>
 
-    <main class="dashboard-grid">
+    <!-- SISTEMA DE ABAS -->
+    <div class="tabs-container">
+        <div class="tabs-nav">
+            <button class="tab-button active" data-tab="principal">📊 Principal</button>
+            <button class="tab-button" data-tab="valvulas">🔌 Válvulas</button>
+            <button class="tab-button" data-tab="reguladores">⚙️ Reguladores</button>
+        </div>
+    </div>
 
-        <div class="panel left-panel">
-            <div class="status-item">
-                <span class="status-label">Bomba</span>
-                <span class="status-value on">LIGADO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Tubo 1</span>
-                <span class="status-value on">INSERIDO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Tubo 2</span>
-                <span class="status-value on">INSERIDO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Tubo 3</span>
-                <span class="status-value on">INSERIDO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Regulador 1</span>
-                <span class="status-value on">LIGADO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Regulador 2</span>
-                <span class="status-value on">LIGADO</span>
-            </div>
-            <div class="status-item">
-                <span class="status-label">Regulador 3</span>
-                <span class="status-value off">DESLIGADO</span>
+    <!-- ============================================
+         ABA 1: PRINCIPAL
+         ============================================ -->
+    <main class="tab-content active" id="principal">
+        <div class="dashboard-grid">
+
+            <div class="panel left-panel">
+                <!-- MANGUEIRAS - BOTÕES -->
+                <div class="section-title">Mangueiras Conectadas</div>
+                <button class="mangueira-button conectada" id="btnMangueira1" data-mangueira="1">
+                    🔗 Mangueira 1
+                </button>
+                <button class="mangueira-button conectada" id="btnMangueira2" data-mangueira="2">
+                    🔗 Mangueira 2
+                </button>
+                <button class="mangueira-button conectada" id="btnMangueira3" data-mangueira="3">
+                    🔗 Mangueira 3
+                </button>
+
+                <!-- STATUS GERAIS -->
+                <hr class="divider">
+
+                <div class="status-item">
+                    <span class="status-label">Bomba</span>
+                    <span class="status-value on" id="status-bomba">LIGADO</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Estado</span>
+                    <span class="status-value on" id="status-estado">OPERACIONAL</span>
+                </div>
+
+                <!-- BOTÕES DE CONTROLE -->
+                <div class="button-group">
+                    <button class="btn btn-start" id="btnIniciar">▶️ INICIAR</button>
+                    <button class="btn btn-emergency" id="btnEmergencia">🚨 EMERGÊNCIA</button>
+                </div>
+
+                <!-- TIMER -->
+                <div class="timer-container">
+                    <span class="timer-label">Tempo</span>
+                    <span class="timer-value" id="timerDisplay">00:00:00</span>
+                </div>
             </div>
 
-            <div class="valves-container">
-                <div class="valve-item">Válvula 1: ABERTA</div>
-                <div class="valve-item">Válvula 2: ABERTA</div>
-                <div class="valve-item">Válvula 3: ABERTA</div>
+            <div class="panel center-panel">
+                <div class="chart-header">
+                    <div class="chart-title">Pressão Absoluta do Tanque</div>
+                    <div class="chart-main-value" id="pressaoValue">0.00 MBarr</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="vacuoChart"></canvas>
+                </div>
+            </div>
+
+            <div class="panel right-panel">
+                <div class="info-block">
+                    <span class="info-label">Pressão</span>
+                    <span class="info-value" id="infoPressao">65.0 MBarr</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">Temp. de Óleo</span>
+                    <span class="info-value" id="infoTemp">65.0°C</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">Fase</span>
+                    <span class="info-value" id="infoFase">SUCÇÃO</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ============================================
+         ABA 2: VÁLVULAS
+         ============================================ -->
+    <main class="tab-content" id="valvulas">
+        <div class="valves-grid">
+            <!-- VÁLVULA 1 -->
+            <div class="panel valve-panel">
+                <div class="valve-header">
+                    <h3>Válvula 1</h3>
+                    <span class="valve-status on" id="valveStatus1">ABERTA</span>
+                </div>
+
+                <div class="valve-visual">
+                    <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
+                        <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
+                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle1">0°</text>
+                        <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator1" />
+                    </svg>
+                </div>
+
+                <button class="servo-button" id="btnServo1" data-servo="1">
+                    🔄 Alternar (0° → 90°)
+                </button>
+
+                <div class="valve-info">
+                    <p>Ângulo: <strong id="valveAngleTxt1">0°</strong></p>
+                    <p>Pressão: <strong id="valvePressure1">0 mBar</strong></p>
+                    <p>Fluxo: <strong id="valveFlow1">0 LPM</strong></p>
+                </div>
+            </div>
+
+            <!-- VÁLVULA 2 -->
+            <div class="panel valve-panel">
+                <div class="valve-header">
+                    <h3>Válvula 2</h3>
+                    <span class="valve-status on" id="valveStatus2">ABERTA</span>
+                </div>
+
+                <div class="valve-visual">
+                    <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
+                        <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
+                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle2">0°</text>
+                        <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator2" />
+                    </svg>
+                </div>
+
+                <button class="servo-button" id="btnServo2" data-servo="2">
+                    🔄 Alternar (0° → 90°)
+                </button>
+
+                <div class="valve-info">
+                    <p>Ângulo: <strong id="valveAngleTxt2">0°</strong></p>
+                    <p>Pressão: <strong id="valvePressure2">0 mBar</strong></p>
+                    <p>Fluxo: <strong id="valveFlow2">0 LPM</strong></p>
+                </div>
+            </div>
+
+            <!-- VÁLVULA 3 -->
+            <div class="panel valve-panel">
+                <div class="valve-header">
+                    <h3>Válvula 3</h3>
+                    <span class="valve-status on" id="valveStatus3">ABERTA</span>
+                </div>
+
+                <div class="valve-visual">
+                    <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
+                        <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
+                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle3">0°</text>
+                        <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator3" />
+                    </svg>
+                </div>
+
+                <button class="servo-button" id="btnServo3" data-servo="3">
+                    🔄 Alternar (0° → 90°)
+                </button>
+
+                <div class="valve-info">
+                    <p>Ângulo: <strong id="valveAngleTxt3">0°</strong></p>
+                    <p>Pressão: <strong id="valvePressure3">0 mBar</strong></p>
+                    <p>Fluxo: <strong id="valveFlow3">0 LPM</strong></p>
+                </div>
             </div>
         </div>
+    </main>
 
-        <div class="panel center-panel">
-            <div class="chart-header">
-                <div class="chart-title">Pressão Absoluta do Tanque</div>
-                <div class="chart-main-value">0.00 MBarr</div>
+    <!-- ============================================
+         ABA 3: REGULADORES E ÓLEO
+         ============================================ -->
+    <main class="tab-content" id="reguladores">
+        <div class="reguladores-grid">
+            <!-- REGULADOR 1 -->
+            <div class="panel regulador-panel">
+                <div class="regulador-header">
+                    <h3>Regulador 1</h3>
+                    <span class="regulador-status on" id="regStatus1">ATIVO</span>
+                </div>
+                <div class="regulador-info">
+                    <div class="info-row">
+                        <span>Pressão Saída:</span>
+                        <strong id="regPressure1">300 mBar</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Temperatura:</span>
+                        <strong id="regTemp1">45°C</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Fluxo:</span>
+                        <strong id="regFlow1">2.5 LPM</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Número de Série:</span>
+                        <strong>REG-001</strong>
+                    </div>
+                </div>
             </div>
-            <div class="chart-container">
-                <canvas id="vacuoChart"></canvas>
+
+            <!-- REGULADOR 2 -->
+            <div class="panel regulador-panel">
+                <div class="regulador-header">
+                    <h3>Regulador 2</h3>
+                    <span class="regulador-status on" id="regStatus2">ATIVO</span>
+                </div>
+                <div class="regulador-info">
+                    <div class="info-row">
+                        <span>Pressão Saída:</span>
+                        <strong id="regPressure2">280 mBar</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Temperatura:</span>
+                        <strong id="regTemp2">43°C</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Fluxo:</span>
+                        <strong id="regFlow2">2.3 LPM</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Número de Série:</span>
+                        <strong>REG-002</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REGULADOR 3 -->
+            <div class="panel regulador-panel">
+                <div class="regulador-header">
+                    <h3>Regulador 3</h3>
+                    <span class="regulador-status off" id="regStatus3">INATIVO</span>
+                </div>
+                <div class="regulador-info">
+                    <div class="info-row">
+                        <span>Pressão Saída:</span>
+                        <strong id="regPressure3">0 mBar</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Temperatura:</span>
+                        <strong id="regTemp3">25°C</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Fluxo:</span>
+                        <strong id="regFlow3">0 LPM</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Número de Série:</span>
+                        <strong>REG-003</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÓLEO VEGETAL -->
+            <div class="panel oil-panel">
+                <div class="oil-header">
+                    <h3>Óleo Vegetal</h3>
+                    <span class="oil-status warning">ATENÇÃO</span>
+                </div>
+
+                <div class="oil-visual">
+                    <div class="oil-container">
+                        <div class="oil-level" id="oilLevel" style="height: 65%;">
+                            <span class="oil-percentage">65%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="oil-info">
+                    <div class="info-row">
+                        <span>Nível:</span>
+                        <strong id="oilLevelText">65%</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Estado:</span>
+                        <strong id="oilState">Bom</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Próxima Troca:</span>
+                        <strong id="oilNextChange">+45 dias</strong>
+                    </div>
+                    <div class="warning-text" id="oilWarning">
+                        ⚠️ Nível abaixo de 70% - Verifique em breve
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="panel right-panel">
-            <div class="info-block">
-                <span class="info-label">Pressão</span>
-                <span class="info-value">65.0 MBarr</span>
-            </div>
-            <div class="info-block">
-                <span class="info-label">Temp. de Óleo</span>
-                <span class="info-value">65.0°C</span>
-            </div>
-            <div class="info-block">
-                <span class="info-label">Tempo de Atuação</span>
-                <span class="info-value">94Min</span>
+        <div id="modalSair" class="modal-overlay">
+            <div class="modal-content">
+                <h3>⚠️ Encerrar Sistema</h3>
+                <p>Tem certeza que deseja encerrar o Controle de Vácuo?</p>
+                <div class="modal-buttons">
+                    <button id="btnCancelarSair" class="btn btn-cancel">Cancelar</button>
+                    <button id="btnConfirmarSair" class="btn btn-confirm">Sim, Encerrar</button>
+                </div>
             </div>
         </div>
-
     </main>
 
     <script src="script.js"></script>

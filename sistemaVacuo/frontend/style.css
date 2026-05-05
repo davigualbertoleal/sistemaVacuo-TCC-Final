@@ -6,205 +6,555 @@
 }
 
 body {
-    background-color: #0a0a0a; /* Fundo exato do Forms */
+    background-color: #0a0a0a;
     color: #ffffff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 20px 40px; /* Espaçamento das bordas da tela */
+    padding: 10px 20px;
 }
 
 /* DATA NO TOPO DIREITO */
 .top-info {
     text-align: right;
     color: #5a5a5a;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
     margin-bottom: 5px;
 }
 
-/* PAINÉIS GERAIS (O estilo "FixedSingle" do Forms) */
+/* PAINÉIS GERAIS */
 .panel {
-    background-color: #141414; /* Cor exata dos painéis */
+    background-color: #141414;
     border: 1px solid #333333;
+    border-radius: 8px;
 }
 
-/* PANEL 4 (CABEÇALHO) */
+/* HEADER */
 .header-panel {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 30px;
-    margin-bottom: 20px;
+    padding: 12px 20px;
+    margin-bottom: 15px;
 }
 
 .header-title {
     font-family: 'Tahoma', sans-serif;
-    font-size: 28px;
+    font-size: 22px;
     font-weight: bold;
 }
 
-/* =========================================
-   O NOVO BOTÃO 'X' BONITÃO
-========================================= */
 .btn-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 45px;
-    height: 45px;
-    font-size: 20px;
+    width: 35px;
+    height: 35px;
+    font-size: 16px;
     font-weight: bold;
     color: #ff4d4d;
     background-color: rgba(255, 77, 77, 0.1);
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
+    border: none;
 }
 
     .btn-close:hover {
         background-color: #ff4d4d;
         color: #ffffff;
-        box-shadow: 0 0 15px rgba(255, 77, 77, 0.4);
-        transform: scale(1.05);
+        box-shadow: 0 0 10px rgba(255, 77, 77, 0.4);
     }
 
-/* ESTRUTURA DOS 3 PAINÉIS INFERIORES */
-.dashboard-grid {
-    display: grid;
-    /* Mantém a proporção exata: estreito - largo - estreito */
-    grid-template-columns: 250px 1fr 250px;
-    gap: 20px;
-    flex: 1; /* Faz o grid ocupar o resto da tela */
+/* ============================================
+   SISTEMA DE ABAS
+   ============================================ */
+.tabs-container {
+    margin-bottom: 15px;
 }
 
-/* PANEL 6 (ESQUERDA - STATUS) */
+.tabs-nav {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #333333;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    background-color: transparent;
+    color: #888;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+}
+
+    .tab-button:hover {
+        color: #fff;
+    }
+
+    .tab-button.active {
+        color: #e8e8e8;
+        border-bottom-color: #e8e8e8;
+    }
+
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+    .tab-content.active {
+        display: block;
+    }
+
+/* ============================================
+   ABA PRINCIPAL - GRID
+   ============================================ */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    gap: 15px;
+    flex: 1;
+}
+
+/* LEFT PANEL */
 .left-panel {
-    padding: 20px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
+}
+
+.section-title {
+    color: #e8e8e8;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.mangueira-button {
+    padding: 8px 12px;
+    background-color: #1a1a1a;
+    border: 2px solid #444;
+    color: #aaa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+    .mangueira-button.conectada {
+        background-color: rgba(232, 232, 232, 0.1);
+        border-color: #e8e8e8;
+        color: #e8e8e8;
+        box-shadow: 0 0 8px rgba(232, 232, 232, 0.2);
+    }
+
+.divider {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 10px 0;
 }
 
 .status-item {
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
 .status-label {
-    color: darkgray;
-    font-size: 14px;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
 }
 
 .status-value {
-    font-size: 22px;
+    font-size: 16px;
     font-weight: bold;
 }
 
-.on {
-    color: limegreen;
-}
+    /* AQUI MUDOU: Era azul, agora é Branco Puro p/ dar destaque */
+    .status-value.on {
+        color: #ffffff;
+        text-shadow: 0 0 5px rgba(255,255,255,0.5);
+    }
 
-.auto {
-    color: gold;
-}
+    .status-value.off {
+        color: #ff6b6b;
+    }
 
-.valves-container {
-    margin-top: auto; /* Joga as válvulas lá pro fundo do painel */
+.button-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.valve-item {
-    color: darkgray;
+.btn {
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
     font-size: 13px;
+    transition: 0.2s;
 }
 
-/* PANEL 7 (MEIO - GRÁFICO) */
+.btn-start {
+    background-color: #27ae60;
+    color: white;
+}
+
+    .btn-start:hover:not(:disabled) {
+        background-color: #229954;
+    }
+
+    .btn-start:disabled {
+        background-color: #333;
+        cursor: not-allowed;
+        color: #666;
+    }
+
+.btn-emergency {
+    background-color: #e74c3c;
+    color: white;
+}
+
+    .btn-emergency:hover {
+        background-color: #c0392b;
+    }
+
+.timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 15px;
+    background-color: rgba(232, 232, 232, 0.05);
+    border-radius: 8px;
+    margin-top: auto;
+}
+
+.timer-label {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.timer-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #e8e8e8;
+    font-family: 'Courier New', monospace;
+}
+
+/* CENTER PANEL */
 .center-panel {
-    padding: 20px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
 }
 
 .chart-header {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .chart-title {
     color: #5a5a5a;
-    font-size: 16px;
+    font-size: 14px;
+    text-transform: uppercase;
 }
 
+/* AQUI MUDOU: Valor principal agora é branco */
 .chart-main-value {
-    font-size: 48px;
+    font-size: 32px;
     font-weight: bold;
     margin: 5px 0;
-}
-
-.chart-meta {
-    color: darkgray;
-    font-size: 14px;
+    color: #ffffff;
 }
 
 .chart-container {
     flex: 1;
     position: relative;
-    width: 100%;
+    min-height: 200px;
 }
 
-/* =========================================
-   PAINEL DA DIREITA ARRUMADO (Sem espação)
-========================================= */
+/* RIGHT PANEL */
 .right-panel {
-    padding: 40px 20px;
+    padding: 25px 15px;
     display: flex;
     flex-direction: column;
-    gap: 45px;
-    justify-content: flex-start;
+    gap: 30px;
 }
 
 .info-block {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 2px;
 }
 
 .info-label {
-    color: darkgray;
-    font-size: 14px;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
 }
 
 .info-value {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: bold;
+    color: #e8e8e8;
 }
 
-/* =========================================
-   RESPONSIVIDADE (TABLETS E TELAS MENORES)
-========================================= */
-@media (max-width: 900px) {
-    body {
-        height: auto; /* Permite que a tela cresça para baixo */
-        overflow-y: auto; /* Volta a barra de rolagem se precisar */
+/* ============================================
+   ABA VÁLVULAS & REGULADORES
+   ============================================ */
+.valves-grid, .reguladores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.valve-panel, .regulador-panel, .oil-panel {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.valve-header, .regulador-header, .oil-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .valve-header h3, .regulador-header h3, .oil-header h3 {
+        font-size: 16px;
     }
 
+.valve-status, .regulador-status, .oil-status {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+    /* AQUI MUDOU: Status ON agora é cinza claro/branco, sem azul */
+    .valve-status.on, .regulador-status.on {
+        background-color: rgba(232, 232, 232, 0.15);
+        color: #e8e8e8;
+        border: 1px solid #444;
+    }
+
+    .valve-status.off, .regulador-status.off {
+        background-color: rgba(255, 107, 107, 0.2);
+        color: #ff6b6b;
+    }
+
+.valve-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 160px;
+    background-color: rgba(232, 232, 232, 0.02);
+    border-radius: 8px;
+}
+
+    .valve-visual svg {
+        width: 100%;
+        height: 100%;
+        max-width: 120px;
+    }
+
+.servo-button {
+    padding: 8px;
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+    color: #aaa;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: 0.3s;
+}
+
+    .servo-button:hover {
+        background-color: #222;
+        border-color: #666;
+    }
+
+.valve-info, .regulador-info, .oil-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+    .valve-info p, .info-row {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid #222;
+        padding-bottom: 4px;
+    }
+
+        .info-row span {
+            color: #888;
+        }
+
+        .info-row strong {
+            color: #e8e8e8;
+        }
+
+/* ÓLEO (Corrigido para NÃO ser destaque na grid dos reguladores) */
+.oil-panel {
+    grid-column: auto;
+    max-width: 100%;
+}
+/* Ocupa só 1 coluna agora */
+.oil-status.warning {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.oil-visual {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+    height: 140px;
+}
+/* Altura ajustada */
+.oil-container {
+    width: 50px;
+    height: 100%;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #0a0a0a;
+    position: relative;
+}
+
+.oil-level {
+    background: linear-gradient(to top, #e8e8e8, #aaa);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: height 0.5s;
+}
+
+.oil-percentage {
+    color: #000;
+    font-weight: bold;
+    font-size: 12px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+}
+
+.warning-text {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #ffc107;
+    margin-top: 10px;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 1000px) {
     .dashboard-grid {
-        /* Muda de 3 colunas para 1 coluna só (um embaixo do outro) */
         grid-template-columns: 1fr;
     }
 
-    .header-panel {
-        /* Centraliza o título se a tela for muito pequena */
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-    }
-
-    .chart-container {
-        /* Garante que o gráfico tenha uma altura mínima legal no celular/tablet */
+    .center-panel {
         min-height: 300px;
     }
+
+    .right-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 15px;
+        gap: 15px;
+    }
 }
+
+/* MODAL DE SAÍDA (WEBVIEW2) */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #141414;
+    border: 1px solid #444;
+    padding: 25px 30px;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+
+    .modal-content h3 {
+        margin-bottom: 15px;
+        color: #ffffff;
+        font-size: 20px;
+    }
+
+    .modal-content p {
+        margin-bottom: 25px;
+        color: #aaa;
+        font-size: 14px;
+    }
+
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.btn-cancel {
+    background-color: #333;
+    color: #fff;
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+    .btn-cancel:hover {
+        background-color: #444;
+    }
+
+.btn-confirm {
+    background-color: #e74c3c;
+    color: #fff;
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+    .btn-confirm:hover {
+        background-color: #c0392b;
+    }
