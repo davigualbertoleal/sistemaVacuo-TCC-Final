@@ -1,280 +1,588 @@
 // =============================================
-//  VARIÁVEIS GERAIS E ESTADO
+//  SCRIPT - Sistema de Vácuo
+//  VERSÃO CORRIGIDA v2
 // =============================================
-let processoEmAndamento = false;
-let tempoSegundos = 0;
+
+const API_URL = "http://localhost:5000/api";
+let usuarioAtual = null;
 let timerInterval = null;
-let apiInterval = null;
-let chartVacuo = null;
+let tempoDecorrido = 0;
+let processoEmAndamento = false;
+let dashboardCarregado = false;
+
+const mangueiras = { 1: true, 2: true, 3: true };
+const servos = { 1: 0, 2: 0, 3: 0 };
+let dadosAtual = null;
+let cicloAtualId = 1;
 
 // =============================================
-//  INICIALIZAÇÃO QUANDO A PÁGINA CARREGA
+//  INICIALIZAÇÃO
 // =============================================
-document.addEventListener("DOMContentLoaded", () => {
-    iniciarRelogio();
-    configurarAbas();
-    configurarBotoes();
-    configurarModalFechar();
-    inicializarGrafico();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ DOM carregado');
+    verificarSessao();
+    configurarEventosLogin();
+    setInterval(atualizarRelogio, 1000);
+    atualizarRelogio();
 });
 
 // =============================================
-//  RELÓGIO DO TOPO
+//  AUTENTICAÇÃO
 // =============================================
-function iniciarRelogio() {
-    const relogioEl = document.getElementById("relogio");
-    setInterval(() => {
-        const agora = new Date();
-        const dataStr = agora.toLocaleDateString("pt-BR");
-        const horaStr = agora.toLocaleTimeString("pt-BR");
-        relogioEl.textContent = `TSEA Energy | ${dataStr} - ${horaStr}`;
-    }, 1000);
+function verificarSessao() {
+    const idArmazenado = localStorage.getItem('usuarioId');
+
+    if (idArmazenado) {
+        usuarioAtual = idArmazenado;
+        console.log('✅ Usuário encontrado:', usuarioAtual);
+        mostrarDashboard();
+    } else {
+        console.log('❌ Sem usuário, mostrando modal');
+        mostrarModalLogin();
+    }
+}
+
+function configurarEventosLogin() {
+    const btnConfirmar = document.getElementById('btnConfirmarId');
+    const inputId = document.getElementById('inputId');
+
+    if (btnConfirmar) btnConfirmar.addEventListener('click', validarId);
+
+    if (inputId) {
+        inputId.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') validarId();
+        });
+        inputId.focus();
+    }
+
+    // Sem botão Sair — sessão dura até o app fechar/reiniciar
+}
+
+function mostrarModalLogin() {
+    const modal = document.getElementById('modalLogin');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function ocultarModalLogin() {
+    const modal = document.getElementById('modalLogin');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function validarId() {
+    const inputId = document.getElementById('inputId');
+    const id = inputId.value.trim().toUpperCase();
+    const errorMsg = document.getElementById('errorMsg');
+
+    if (!id) {
+        mostrarErro('Digite um ID válido!', errorMsg);
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/operadores?identificador=${id}`);
+        const data = await response.json();
+
+        if (response.ok && data && data.id) {
+            usuarioAtual = id;
+            localStorage.setItem('usuarioId', id);
+            localStorage.setItem('usuarioNome', data.nome);
+            localStorage.setItem('usuarioDbId', data.id);
+            inputId.value = '';
+            mostrarDashboard();
+        } else {
+            mostrarErro('❌ ID não encontrado!', errorMsg);
+            inputId.value = '';
+        }
+    } catch (error) {
+        console.log('⚠️ API offline, validação local');
+        if (id === 'OP-001' || id === 'OP-002') {
+            usuarioAtual = id;
+            localStorage.setItem('usuarioId', id);
+            localStorage.setItem('usuarioNome', 'Operador');
+            inputId.value = '';
+            mostrarDashboard();
+        } else {
+            mostrarErro('❌ ID não encontrado!', errorMsg);
+            inputId.value = '';
+        }
+    }
+}
+
+function mostrarErro(msg, elemento) {
+    if (!elemento) return;
+    elemento.textContent = msg;
+    elemento.classList.add('show');
+    setTimeout(() => elemento.classList.remove('show'), 4000);
+}
+
+function atualizarNomeUsuario() {
+    const nome = localStorage.getItem('usuarioNome') || usuarioAtual;
+    const el = document.getElementById('usuarioLogado');
+    if (el) el.textContent = `${usuarioAtual}  —  ${nome}`;
+}
+
+function mostrarDashboard() {
+    ocultarModalLogin();
+    atualizarNomeUsuario();
+
+    if (!dashboardCarregado) {
+        dashboardCarregado = true;
+        console.log('✅ Inicializando dashboard');
+        inicializarDashboard();
+    }
 }
 
 // =============================================
-//  SISTEMA DE ABAS (TABS)
+//  INICIALIZAR DASHBOARD
 // =============================================
+function inicializarDashboard() {
+    configurarAbas();
+    configurarMangueiras();
+    configurarServos();
+    inicializarGrafico();
+    configurarBotoes();
+    mostrarDadosIniciais();
+    validarMangueiras();
+}
+
+function mostrarDadosIniciais() {
+    const pressaoEl = document.getElementById('pressaoValue');
+    if (pressaoEl) pressaoEl.textContent = '-- MBarr';
+
+    const infoPressaoEl = document.getElementById('infoPressao');
+    if (infoPressaoEl) infoPressaoEl.textContent = '-- MBarr';
+
+    const infoTempEl = document.getElementById('infoTemp');
+    if (infoTempEl) infoTempEl.textContent = '--°C';
+
+    const infoFaseEl = document.getElementById('infoFase');
+    if (infoFaseEl) infoFaseEl.textContent = 'AGUARDANDO';
+
+    const timerEl = document.getElementById('timerDisplay');
+    if (timerEl) timerEl.textContent = '00:00:00';
+
+    [1, 2, 3].forEach(n => {
+        const p = document.getElementById(`valvePressure${n}`);
+        const f = document.getElementById(`valveFlow${n}`);
+        if (p) p.textContent = '-- mBar';
+        if (f) f.textContent = '-- LPM';
+    });
+}
+
 function configurarAbas() {
-    const botoesAba = document.querySelectorAll(".tab-button");
-    const conteudosAba = document.querySelectorAll(".tab-content");
-
-    botoesAba.forEach(botao => {
-        botao.addEventListener("click", () => {
-            // Remove a classe active de todos
-            botoesAba.forEach(b => b.classList.remove("active"));
-            conteudosAba.forEach(c => c.classList.remove("active"));
-
-            // Ativa o botão clicado e seu conteúdo
-            botao.classList.add("active");
-            const alvo = botao.getAttribute("data-tab");
-            document.getElementById(alvo).classList.add("active");
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            button.classList.add('active');
+            const tab = document.getElementById(tabName);
+            if (tab) tab.classList.add('active');
         });
     });
 }
 
-// =============================================
-//  BOTÕES PRINCIPAIS (INICIAR / EMERGÊNCIA)
-// =============================================
+function configurarMangueiras() {
+    document.querySelectorAll('.mangueira-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const num = btn.getAttribute('data-mangueira');
+            mangueiras[num] = !mangueiras[num];
+
+            if (mangueiras[num]) {
+                btn.classList.add('conectada');
+                btn.textContent = `🔗 Mangueira ${num}`;
+            } else {
+                btn.classList.remove('conectada');
+                btn.textContent = `⚫ Mangueira ${num}`;
+            }
+
+            validarMangueiras();
+        });
+    });
+}
+
+function configurarServos() {
+    document.querySelectorAll('.servo-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const num = btn.getAttribute('data-servo');
+            servos[num] = servos[num] === 0 ? 90 : 0;
+            atualizarValvulaVisual(num, servos[num]);
+        });
+    });
+}
+
 function configurarBotoes() {
-    const btnIniciar = document.getElementById("btnIniciar");
-    const btnEmergencia = document.getElementById("btnEmergencia");
-    const statusEstado = document.getElementById("status-estado");
+    const btnIniciar = document.getElementById('btnIniciar');
+    const btnEmergencia = document.getElementById('btnEmergencia');
+    const btnRelatorio = document.getElementById('btnRelatorio');
+    const btnFechar = document.getElementById('btnFechar');
 
-    btnIniciar.addEventListener("click", () => {
-        if (!processoEmAndamento) {
-            processoEmAndamento = true;
-            btnIniciar.disabled = true;
-            statusEstado.textContent = "EM PROCESSO";
-            statusEstado.className = "status-value on";
+    if (btnIniciar) btnIniciar.addEventListener('click', iniciarProcesso);
+    if (btnEmergencia) btnEmergencia.addEventListener('click', emergencia);
+    if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioPDF);
 
-            // Inicia o timer e a busca na API
-            iniciarTimer();
-            // Busca imediatamente a primeira vez, depois a cada 2 seg
-            buscarDadosDaAPI();
-            apiInterval = setInterval(buscarDadosDaAPI, 2000);
-        }
-    });
+    // X vermelho → modal bonito de confirmação
+    if (btnFechar) {
+        btnFechar.addEventListener('click', () => {
+            abrirModalFechar();
+        });
+    }
 
-    btnEmergencia.addEventListener("click", () => {
-        processoEmAndamento = false;
-        btnIniciar.disabled = false;
-        statusEstado.textContent = "PARADA DE EMERGÊNCIA";
-        statusEstado.className = "status-value off";
+    // Botões do modal de confirmação
+    const btnCancelar = document.getElementById('btnCancelarFechar');
+    const btnConfirmar = document.getElementById('btnConfirmarFechar');
 
-        // Para tudo
-        clearInterval(timerInterval);
-        clearInterval(apiInterval);
-
-        // Pinta a bomba de vermelho pra avisar que parou
-        document.getElementById("status-bomba").textContent = "DESLIGADO";
-        document.getElementById("status-bomba").className = "status-value off";
-    });
+    if (btnCancelar) btnCancelar.addEventListener('click', fecharModalFechar);
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', () => {
+            // Envia mensagem pro C# fechar o app
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage('fechar_app');
+            } else {
+                // Fallback no navegador
+                window.close();
+            }
+        });
+    }
 }
 
 // =============================================
-//  CRONÔMETRO
+//  MODAL DE CONFIRMAÇÃO FECHAR
 // =============================================
-function iniciarTimer() {
-    const timerDisplay = document.getElementById("timerDisplay");
+function abrirModalFechar() {
+    const modal = document.getElementById('modalFechar');
+    if (modal) modal.classList.remove('hidden');
+}
 
+function fecharModalFechar() {
+    const modal = document.getElementById('modalFechar');
+    if (modal) modal.classList.add('hidden');
+}
+
+// =============================================
+//  MANGUEIRAS
+// =============================================
+function validarMangueiras() {
+    const btnIniciar = document.getElementById('btnIniciar');
+    if (!btnIniciar) return;
+
+    const todasConectadas = mangueiras[1] && mangueiras[2] && mangueiras[3];
+    btnIniciar.disabled = !todasConectadas;
+}
+
+// =============================================
+//  VÁLVULAS
+// =============================================
+function atualizarValvulaVisual(num, angulo) {
+    const angleEl = document.getElementById(`valveAngle${num}`);
+    const angleTxtEl = document.getElementById(`valveAngleTxt${num}`);
+    const indicatorEl = document.getElementById(`valveIndicator${num}`);
+    const pressureEl = document.getElementById(`valvePressure${num}`);
+    const flowEl = document.getElementById(`valveFlow${num}`);
+    const statusEl = document.getElementById(`valveStatus${num}`);
+
+    if (angleEl) angleEl.textContent = angulo + '°';
+    if (angleTxtEl) angleTxtEl.textContent = angulo + '°';
+    if (indicatorEl) indicatorEl.style.transform = `rotate(${angulo}deg)`;
+
+    if (processoEmAndamento) {
+        const pressao = (angulo / 180) * 500;
+        if (pressureEl) pressureEl.textContent = pressao.toFixed(0) + ' mBar';
+        if (flowEl) flowEl.textContent = (pressao / 200).toFixed(1) + ' LPM';
+    } else {
+        if (pressureEl) pressureEl.textContent = '-- mBar';
+        if (flowEl) flowEl.textContent = '-- LPM';
+    }
+
+    const status = angulo < 90 ? 'FECHADA' : 'ABERTA';
+    if (statusEl) {
+        statusEl.textContent = status;
+        statusEl.className = 'valve-status ' + (status === 'ABERTA' ? 'on' : 'off');
+    }
+}
+
+// =============================================
+//  PROCESSO E TIMER
+// =============================================
+function iniciarProcesso() {
+    if (!mangueiras[1] || !mangueiras[2] || !mangueiras[3]) {
+        alert('⚠️ Conecte todas as 3 mangueiras!');
+        return;
+    }
+
+    processoEmAndamento = true;
+    tempoDecorrido = 0;
+
+    const btnIniciar = document.getElementById('btnIniciar');
+    if (btnIniciar) btnIniciar.disabled = true;
+
+    const statusEl = document.getElementById('status-estado');
+    if (statusEl) {
+        statusEl.textContent = 'PROCESSANDO';
+        statusEl.style.color = '';
+    }
+
+    // Limpa o gráfico ao iniciar
+    if (window.vacuoChart) {
+        window.vacuoChart.data.labels = [];
+        window.vacuoChart.data.datasets[0].data = [];
+        window.vacuoChart.update();
+    }
+
+    // Timer
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-        tempoSegundos++;
-        const horas = Math.floor(tempoSegundos / 3600).toString().padStart(2, "0");
-        const minutos = Math.floor((tempoSegundos % 3600) / 60).toString().padStart(2, "0");
-        const segundos = (tempoSegundos % 60).toString().padStart(2, "0");
-        timerDisplay.textContent = `${horas}:${minutos}:${segundos}`;
+        tempoDecorrido++;
+        const h = Math.floor(tempoDecorrido / 3600).toString().padStart(2, '0');
+        const m = Math.floor((tempoDecorrido % 3600) / 60).toString().padStart(2, '0');
+        const s = (tempoDecorrido % 60).toString().padStart(2, '0');
+        const timerEl = document.getElementById('timerDisplay');
+        if (timerEl) timerEl.textContent = `${h}:${m}:${s}`;
     }, 1000);
+
+    // Simulação só começa aqui
+    if (window.simInterval) clearInterval(window.simInterval);
+    window.simInterval = setInterval(simularDados, 1000);
+
+    console.log('▶️ Processo iniciado');
+}
+
+function pararProcesso() {
+    processoEmAndamento = false;
+    if (timerInterval) clearInterval(timerInterval);
+    if (window.simInterval) clearInterval(window.simInterval);
+
+    const btnIniciar = document.getElementById('btnIniciar');
+    if (btnIniciar) btnIniciar.disabled = false;
+
+    const statusEl = document.getElementById('status-estado');
+    if (statusEl) {
+        statusEl.textContent = 'OPERACIONAL';
+        statusEl.style.color = '';
+    }
+}
+
+function emergencia() {
+    pararProcesso();
+    tempoDecorrido = 0;
+
+    const timerEl = document.getElementById('timerDisplay');
+    if (timerEl) timerEl.textContent = '00:00:00';
+
+    const statusEl = document.getElementById('status-estado');
+    if (statusEl) {
+        statusEl.textContent = 'EMERGÊNCIA';
+        statusEl.style.color = '#ff6b6b';
+    }
+
+    servos[1] = 0;
+    servos[2] = 0;
+    servos[3] = 0;
+    atualizarValvulaVisual(1, 0);
+    atualizarValvulaVisual(2, 0);
+    atualizarValvulaVisual(3, 0);
+
+    mostrarDadosIniciais();
+    console.log('🚨 EMERGÊNCIA ATIVADA');
 }
 
 // =============================================
-//  GRÁFICO (CHART.JS)
+//  GRÁFICO
 // =============================================
 function inicializarGrafico() {
-    const ctx = document.getElementById("vacuoChart").getContext("2d");
+    const canvas = document.getElementById('vacuoChart');
+    if (!canvas) return;
 
-    // Gradiente pra ficar bonito
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, "rgba(232, 232, 232, 0.4)");
-    gradient.addColorStop(1, "rgba(232, 232, 232, 0.0)");
-
-    chartVacuo = new Chart(ctx, {
-        type: "line",
+    const ctx = canvas.getContext('2d');
+    window.vacuoChart = new Chart(ctx, {
+        type: 'line',
         data: {
-            labels: [], // Tempos
+            labels: [],
             datasets: [{
-                label: "Pressão (mBar)",
+                label: 'Pressão (mBar)',
                 data: [],
-                borderColor: "#e8e8e8",
-                backgroundColor: gradient,
+                borderColor: '#e8e8e8',
                 borderWidth: 2,
-                fill: true,
-                tension: 0.4, // Curva suave
-                pointRadius: 0
+                tension: 0.4,
+                pointRadius: 0,
+                fill: {
+                    target: 'origin',
+                    above: 'rgba(232, 232, 232, 0.04)'
+                }
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 0 // Tira a animação chata a cada att
-            },
+            animation: { duration: 250 },
+            plugins: { legend: { display: false } },
             scales: {
-                x: { display: false }, // Oculta a linha do tempo embaixo
                 y: {
-                    grid: { color: "#333" },
-                    ticks: { color: "#888" },
-                    min: 0
+                    min: 0,
+                    max: 1000,
+                    grid: { color: '#1e1e1e' },
+                    ticks: { color: '#444', font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#444', font: { size: 9 }, maxTicksLimit: 8 }
                 }
-            },
-            plugins: {
-                legend: { display: false }
             }
         }
     });
 }
 
 // =============================================
-//  COMUNICAÇÃO REAL COM A API C#
+//  DADOS
 // =============================================
-async function buscarDadosDaAPI() {
+function simularDados() {
     if (!processoEmAndamento) return;
 
-    try {
-        // Tenta buscar a leitura mais recente do ciclo 1
-        const resposta = await fetch('http://localhost:5000/api/LeiturasSensores/ciclo/1');
+    const pressao = 100 + Math.random() * 600;
+    dadosAtual = {
+        cicloId: cicloAtualId,
+        estadoMaquina: "Ligado",
+        pressaoCamaraMbar: pressao,
+        pressaoTubo1Mbar: pressao * 0.6,
+        fluxoTubo1LPM: (pressao / 1000) * 5,
+        pressaoTubo2Mbar: pressao * 0.5,
+        fluxoTubo2LPM: (pressao / 1000) * 4.5,
+        pressaoTubo3Mbar: pressao * 0.55,
+        fluxoTubo3LPM: (pressao / 1000) * 4.8,
+        bombaLigada: true,
+        valvulaAberta: true,
+        servoAngulo: servos[1] || 0
+    };
 
-        if (resposta.ok) {
-            const dados = await resposta.json();
-            atualizarInterface(dados);
-        } else {
-            console.log("Aguardando dados ou erro na API. Status:", resposta.status);
+    atualizarDados(dadosAtual);
+}
+
+function atualizarDados(dados) {
+    const pressaoEl = document.getElementById('pressaoValue');
+    if (pressaoEl) pressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2) + ' MBarr';
+
+    const infoPressaoEl = document.getElementById('infoPressao');
+    if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(1) + ' MBarr';
+
+    const infoTempEl = document.getElementById('infoTemp');
+    if (infoTempEl) infoTempEl.textContent = '65.0°C';
+
+    if (window.vacuoChart) {
+        const agora = new Date().toLocaleTimeString();
+        window.vacuoChart.data.labels.push(agora);
+        window.vacuoChart.data.datasets[0].data.push(dados.pressaoCamaraMbar);
+
+        if (window.vacuoChart.data.labels.length > 30) {
+            window.vacuoChart.data.labels.shift();
+            window.vacuoChart.data.datasets[0].data.shift();
         }
-    } catch (erro) {
-        console.error("Erro de conexão com a API:", erro);
-        // Opcional: Mostrar um alerta na tela se a API cair
+        window.vacuoChart.update();
     }
+
+    const fase = dados.pressaoCamaraMbar < 200 ? 'SUCÇÃO' :
+        dados.pressaoCamaraMbar <= 500 ? 'ESTÁVEL' : 'PRESSÃO ALTA';
+    const infoFaseEl = document.getElementById('infoFase');
+    if (infoFaseEl) infoFaseEl.textContent = fase;
 }
 
 // =============================================
-//  ATUALIZAÇÃO DA TELA COM OS DADOS REAIS
+//  RELATÓRIO PDF
 // =============================================
-function atualizarInterface(dados) {
-    // 1. Atualiza Valores Principais
-    document.getElementById("pressaoValue").textContent = `${dados.pressaoCamaraMbar.toFixed(2)} mBar`;
-    document.getElementById("infoPressao").textContent = `${dados.pressaoCamaraMbar.toFixed(1)} mBar`;
+async function gerarRelatorioPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-    // Atualiza Status da Bomba (Boleano da API)
-    const statusBomba = document.getElementById("status-bomba");
-    if (dados.bombaLigada) {
-        statusBomba.textContent = "LIGADO";
-        statusBomba.className = "status-value on";
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, 210, 40, 'F');
+
+    doc.setTextColor(232, 232, 232);
+    doc.setFontSize(20);
+    doc.text('RELATÓRIO — SISTEMA DE VÁCUO', 105, 15, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setTextColor(170, 170, 170);
+    doc.text('TSEA Energy', 105, 25, { align: 'center' });
+    doc.text(`Operador: ${usuarioAtual || 'Não identificado'}`, 105, 31, { align: 'center' });
+
+    let yPos = 50;
+    doc.setTextColor(232, 232, 232);
+    doc.setFontSize(12);
+    doc.text('DADOS DO CICLO', 20, yPos);
+
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(170, 170, 170);
+
+    doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, yPos); yPos += 8;
+    doc.text(`Ciclo ID: ${cicloAtualId}`, 20, yPos); yPos += 8;
+    doc.text(`Operador: ${usuarioAtual || 'Não identificado'}`, 20, yPos); yPos += 8;
+
+    const timerEl = document.getElementById('timerDisplay');
+    doc.text(`Tempo de Operação: ${timerEl ? timerEl.textContent : '00:00:00'}`, 20, yPos); yPos += 8;
+
+    const statusEl = document.getElementById('status-estado');
+    doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, yPos);
+
+    yPos += 15;
+    doc.setTextColor(232, 232, 232);
+    doc.setFontSize(12);
+    doc.text('PRESSÕES E FLUXOS', 20, yPos);
+
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(170, 170, 170);
+
+    if (dadosAtual) {
+        doc.text(`Câmara: ${dadosAtual.pressaoCamaraMbar.toFixed(2)} mBar`, 20, yPos); yPos += 8;
+        doc.text(`Tubo 1: ${dadosAtual.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo1LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
+        doc.text(`Tubo 2: ${dadosAtual.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo2LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
+        doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, yPos);
     } else {
-        statusBomba.textContent = "DESLIGADO";
-        statusBomba.className = "status-value off";
+        doc.text('Câmara: --  (processo não iniciado)', 20, yPos); yPos += 8;
+        doc.text('Tubo 1: --  |  Fluxo: --', 20, yPos); yPos += 8;
+        doc.text('Tubo 2: --  |  Fluxo: --', 20, yPos); yPos += 8;
+        doc.text('Tubo 3: --  |  Fluxo: --', 20, yPos);
     }
 
-    // 2. Atualiza Gráfico
-    const chartData = chartVacuo.data;
-    const agora = new Date().toLocaleTimeString();
+    yPos += 15;
+    doc.setTextColor(232, 232, 232);
+    doc.setFontSize(12);
+    doc.text('STATUS DOS COMPONENTES', 20, yPos);
 
-    chartData.labels.push(agora);
-    chartData.datasets[0].data.push(dados.pressaoCamaraMbar);
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(170, 170, 170);
 
-    // Mantém só os últimos 20 pontos no gráfico pra não travar
-    if (chartData.labels.length > 20) {
-        chartData.labels.shift();
-        chartData.datasets[0].data.shift();
-    }
-    chartVacuo.update();
+    doc.text(`Bomba: ${dadosAtual ? (dadosAtual.bombaLigada ? 'LIGADA' : 'DESLIGADA') : '--'}`, 20, yPos); yPos += 8;
+    doc.text(`Válvula: ${dadosAtual ? (dadosAtual.valvulaAberta ? 'ABERTA' : 'FECHADA') : '--'}`, 20, yPos); yPos += 8;
+    doc.text(`Servo: ${dadosAtual ? dadosAtual.servoAngulo + '°' : '--'}`, 20, yPos); yPos += 8;
+    doc.text(`Mangueira 1: ${mangueiras[1] ? 'CONECTADA' : 'DESCONECTADA'}`, 20, yPos); yPos += 8;
+    doc.text(`Mangueira 2: ${mangueiras[2] ? 'CONECTADA' : 'DESCONECTADA'}`, 20, yPos); yPos += 8;
+    doc.text(`Mangueira 3: ${mangueiras[3] ? 'CONECTADA' : 'DESCONECTADA'}`, 20, yPos);
 
-    // 3. Atualiza Tubos/Mangueiras (Pressão e Fluxo)
-    // Tubo 1
-    document.getElementById("valvePressure1").textContent = `${dados.pressaoTubo1Mbar.toFixed(1)} mBar`;
-    document.getElementById("valveFlow1").textContent = `${dados.fluxoTubo1LPM.toFixed(1)} LPM`;
-    document.getElementById("regPressure1").textContent = `${dados.pressaoTubo1Mbar.toFixed(1)} mBar`;
-    document.getElementById("regFlow1").textContent = `${dados.fluxoTubo1LPM.toFixed(1)} LPM`;
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(8);
+    doc.text('Relatório gerado automaticamente — TSEA Energy', 105, 280, { align: 'center' });
 
-    // Tubo 2
-    document.getElementById("valvePressure2").textContent = `${dados.pressaoTubo2Mbar.toFixed(1)} mBar`;
-    document.getElementById("valveFlow2").textContent = `${dados.fluxoTubo2LPM.toFixed(1)} LPM`;
-    document.getElementById("regPressure2").textContent = `${dados.pressaoTubo2Mbar.toFixed(1)} mBar`;
-    document.getElementById("regFlow2").textContent = `${dados.fluxoTubo2LPM.toFixed(1)} LPM`;
+    const filename = `relatorio_vacuo_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(filename);
 
-    // Tubo 3
-    document.getElementById("valvePressure3").textContent = `${dados.pressaoTubo3Mbar.toFixed(1)} mBar`;
-    document.getElementById("valveFlow3").textContent = `${dados.fluxoTubo3LPM.toFixed(1)} LPM`;
-    document.getElementById("regPressure3").textContent = `${dados.pressaoTubo3Mbar.toFixed(1)} mBar`;
-    document.getElementById("regFlow3").textContent = `${dados.fluxoTubo3LPM.toFixed(1)} LPM`;
-
-    // 4. Atualiza Visuais das Válvulas e Servo
-    // Como a API retorna 1 servo e 1 status de válvula geral, vamos aplicar o movimento
-    // na Válvula 1 (você pode replicar pras outras se quiser).
-
-    const angulo = dados.servoAngulo; // Vem da API (0 a 180)
-
-    // Gira o ponteiro do SVG em torno do centro (cx=100, cy=130)
-    document.getElementById("valveIndicator1").setAttribute("transform", `rotate(${angulo} 100 130)`);
-    document.getElementById("valveAngle1").textContent = `${angulo}°`;
-    document.getElementById("valveAngleTxt1").textContent = `${angulo}°`;
-
-    const statusValvula1 = document.getElementById("valveStatus1");
-    if (dados.valvulaAberta) {
-        statusValvula1.textContent = "ABERTA";
-        statusValvula1.className = "valve-status on";
-    } else {
-        statusValvula1.textContent = "FECHADA";
-        statusValvula1.className = "valve-status off";
-    }
+    console.log('📄 PDF gerado:', filename);
 }
 
 // =============================================
-//  MODAL DE SAÍDA E WEBVIEW2
+//  RELÓGIO
 // =============================================
-function configurarModalFechar() {
-    const btnFechar = document.getElementById("btnFechar");
-    const modalSair = document.getElementById("modalSair");
-    const btnCancelarSair = document.getElementById("btnCancelarSair");
-    const btnConfirmarSair = document.getElementById("btnConfirmarSair");
+function atualizarRelogio() {
+    const agora = new Date();
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const ano = String(agora.getFullYear()).slice(-2);
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const min = String(agora.getMinutes()).padStart(2, '0');
+    const seg = String(agora.getSeconds()).padStart(2, '0');
 
-    btnFechar.addEventListener("click", () => {
-        modalSair.style.display = "flex";
-    });
-
-    btnCancelarSair.addEventListener("click", () => {
-        modalSair.style.display = "none";
-    });
-
-    btnConfirmarSair.addEventListener("click", () => {
-        // Envia mensagem pro WinForms fechar o formulário em C#
-        try {
-            if (window.chrome && window.chrome.webview) {
-                window.chrome.webview.postMessage("FECHAR_APP");
-            } else {
-                alert("Simulação de fechamento (fora do WinForms).");
-                modalSair.style.display = "none";
-            }
-        } catch (e) {
-            console.log(e);
-        }
-    });
+    const relogio = document.getElementById('relogioDisplay');
+    if (relogio) {
+        relogio.textContent = `TSEA Energy  |  ${dia}/${mes}/${ano}  ${hora}:${min}:${seg}`;
+    }
 }

@@ -10,7 +10,7 @@ namespace sistemaVacuo
 {
     public partial class Form1 : Form
     {
-        // --- API (ao invés de Serial) ---
+        // --- API ---
         private static HttpClient httpClient = new HttpClient();
         private const string API_URL = "http://localhost:5000/api/leiturasSensores";
 
@@ -32,16 +32,42 @@ namespace sistemaVacuo
         }
 
         // =============================================
-        //  WEBVIEW
+        //  WEBVIEW - CARREGA HTML
         // =============================================
         private async void InicializarWebView()
         {
-            await webView.EnsureCoreWebView2Async(null);
-            webView.WebMessageReceived += RecebeuMensagemDoHtml;
+            try
+            {
+                // Aguarda a inicialização do ambiente do WebView2
+                await webView.EnsureCoreWebView2Async(null);
 
-            string caminhoHtml = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "frontend", "dashboard.html");
-            webView.CoreWebView2.Navigate(caminhoHtml);
+                webView.WebMessageReceived += RecebeuMensagemDoHtml;
+
+                // Monta o caminho completo até o arquivo HTML
+                string caminhoHtml = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "frontend", "dashboard.html");
+
+                if (File.Exists(caminhoHtml))
+                {
+                    // ✅ MUDANÇA AQUI: 
+                    // Em vez de NavigateToString (que perde a referência do CSS),
+                    // usamos Navigate com uma URI de arquivo. Isso permite que o 
+                    // navegador encontre o CSS na mesma pasta ou subpastas.
+                    webView.CoreWebView2.Navigate(new Uri(caminhoHtml).AbsoluteUri);
+
+                    Console.WriteLine("✅ Dashboard carregado via URI local.");
+                }
+                else
+                {
+                    MessageBox.Show($"❌ Arquivo não encontrado em:\n{caminhoHtml}",
+                        "Erro de Caminho", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ Erro ao inicializar WebView:\n{ex.Message}",
+                    "Erro Crítico", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void RecebeuMensagemDoHtml(object sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -92,9 +118,6 @@ namespace sistemaVacuo
 
                     if (dados.Count > 0)
                     {
-                        // Salva no banco (se quiser manter histórico)
-                        // SalvarNoMySql(json);
-
                         // Atualiza dashboard
                         AtualizarDashboard(json);
                     }
@@ -102,7 +125,7 @@ namespace sistemaVacuo
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro ao ler API: {ex.Message}");
+                Console.WriteLine($"❌ Erro ao ler API: {ex.Message}");
             }
         }
 
@@ -142,63 +165,27 @@ namespace sistemaVacuo
         }
 
         // =============================================
-        //  SALVAR NO MYSQL (opcional, se quiser manter histórico)
-        // =============================================
-        private void SalvarNoMySql(string jsonBruto)
-        {
-            try
-            {
-                var dados = ParseJsonSimples(jsonBruto);
-
-                using (var conn = new MySqlConnection(CONN_STRING))
-                {
-                    conn.Open();
-
-                    var cmd = new MySqlCommand(
-                        @"INSERT INTO leiturasSensores 
-                        (cicloId, dataHora, estadoMaquina, 
-                         pressaoCamaraMbar, 
-                         pressaoTubo1Mbar, fluxoTubo1LPM,
-                         pressaoTubo2Mbar, fluxoTubo2LPM,
-                         pressaoTubo3Mbar, fluxoTubo3LPM)
-                        VALUES 
-                        (@ciclo, NOW(), @estado,
-                         @pCamara,
-                         @p1, @f1,
-                         @p2, @f2,
-                         @p3, @f3)", conn);
-
-                    cmd.Parameters.AddWithValue("@ciclo", dados.ContainsKey("cicloId") ? dados["cicloId"] : cicloAtualId);
-                    cmd.Parameters.AddWithValue("@estado", dados.ContainsKey("estadoMaquina") ? dados["estadoMaquina"] : "Desligado");
-                    cmd.Parameters.AddWithValue("@pCamara", dados.ContainsKey("pressaoCamaraMbar") ? dados["pressaoCamaraMbar"] : 0);
-                    cmd.Parameters.AddWithValue("@p1", dados.ContainsKey("pressaoTubo1Mbar") ? dados["pressaoTubo1Mbar"] : 0);
-                    cmd.Parameters.AddWithValue("@f1", dados.ContainsKey("fluxoTubo1LPM") ? dados["fluxoTubo1LPM"] : 0);
-                    cmd.Parameters.AddWithValue("@p2", dados.ContainsKey("pressaoTubo2Mbar") ? dados["pressaoTubo2Mbar"] : 0);
-                    cmd.Parameters.AddWithValue("@f2", dados.ContainsKey("fluxoTubo2LPM") ? dados["fluxoTubo2LPM"] : 0);
-                    cmd.Parameters.AddWithValue("@p3", dados.ContainsKey("pressaoTubo3Mbar") ? dados["pressaoTubo3Mbar"] : 0);
-                    cmd.Parameters.AddWithValue("@f3", dados.ContainsKey("fluxoTubo3LPM") ? dados["fluxoTubo3LPM"] : 0);
-
-                    cmd.ExecuteNonQuery();
-                }
-            }
-            catch { }
-        }
-
-        // =============================================
         //  WEBVIEW → JavaScript
         // =============================================
         private void AtualizarDashboard(string json)
         {
-            // Se for array, pega o primeiro elemento
-            if (json.StartsWith("["))
+            try
             {
-                json = json.Substring(1); // Remove [
-                int indexFechar = json.LastIndexOf("]");
-                json = json.Substring(0, indexFechar); // Remove ]
-            }
+                // Se for array, pega o primeiro elemento
+                if (json.StartsWith("["))
+                {
+                    json = json.Substring(1); // Remove [
+                    int indexFechar = json.LastIndexOf("]");
+                    json = json.Substring(0, indexFechar); // Remove ]
+                }
 
-            string script = $"atualizarDados({json});";
-            webView.CoreWebView2.ExecuteScriptAsync(script);
+                string script = $"if (typeof atualizarDados === 'function') {{ atualizarDados({json}); }}";
+                webView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erro ao atualizar dashboard: {ex.Message}");
+            }
         }
 
         // =============================================
@@ -221,12 +208,12 @@ namespace sistemaVacuo
                     cmd.CommandText = "SELECT LAST_INSERT_ID()";
                     cicloAtualId = (int)(long)cmd.ExecuteScalar();
 
-                    MessageBox.Show($"Ciclo {cicloAtualId} iniciado!", "Ciclo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"✅ Ciclo {cicloAtualId} iniciado!", "Ciclo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao iniciar ciclo: {ex.Message}");
+                MessageBox.Show($"❌ Erro ao iniciar ciclo: {ex.Message}");
             }
         }
 
