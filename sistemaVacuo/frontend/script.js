@@ -1,6 +1,6 @@
 // =============================================
 //  SCRIPT - Sistema de Vácuo
-//  VERSÃO CORRIGIDA v2
+//  VERSÃO FINAL - SEM REGULADORES E COM GAUGES
 // =============================================
 
 const API_URL = "http://localhost:5000/api";
@@ -11,7 +11,7 @@ let processoEmAndamento = false;
 let dashboardCarregado = false;
 
 const mangueiras = { 1: true, 2: true, 3: true };
-const servos = { 1: 0, 2: 0, 3: 0 };
+const servos = { 1: 155, 2: 155, 3: 155 };  // VÁLVULAS COMEÇAM FECHADAS (155°)
 let dadosAtual = null;
 let cicloAtualId = 1;
 
@@ -54,8 +54,6 @@ function configurarEventosLogin() {
         });
         inputId.focus();
     }
-
-    // Sem botão Sair — sessão dura até o app fechar/reiniciar
 }
 
 function mostrarModalLogin() {
@@ -143,14 +141,15 @@ function inicializarDashboard() {
     configurarBotoes();
     mostrarDadosIniciais();
     validarMangueiras();
+    atualizarStatusValvulas();
 }
 
 function mostrarDadosIniciais() {
-    const pressaoEl = document.getElementById('pressaoValue');
-    if (pressaoEl) pressaoEl.textContent = '-- MBarr';
-
     const infoPressaoEl = document.getElementById('infoPressao');
     if (infoPressaoEl) infoPressaoEl.textContent = '-- MBarr';
+
+    const pressaoValueEl = document.getElementById('pressaoValue');
+    if (pressaoValueEl) pressaoValueEl.textContent = '--';
 
     const infoTempEl = document.getElementById('infoTemp');
     if (infoTempEl) infoTempEl.textContent = '--°C';
@@ -161,11 +160,66 @@ function mostrarDadosIniciais() {
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) timerEl.textContent = '00:00:00';
 
+    // Inicializar gauges
+    atualizarGauges(0, 0, 0, 0, 0);
+
+    // Inicializar pressões das mangueiras
+    [1, 2, 3].forEach(n => {
+        const p = document.getElementById(`infoPressaoM${n}`);
+        if (p) p.textContent = '-- mBar';
+    });
+
     [1, 2, 3].forEach(n => {
         const p = document.getElementById(`valvePressure${n}`);
         const f = document.getElementById(`valveFlow${n}`);
         if (p) p.textContent = '-- mBar';
         if (f) f.textContent = '-- LPM';
+    });
+}
+
+// =============================================
+//  GRÁFICO
+// =============================================
+function inicializarGrafico() {
+    const canvas = document.getElementById('vacuoChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    window.vacuoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Pressão (mBar)',
+                data: [],
+                borderColor: '#e8e8e8',
+                borderWidth: 2.5,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: {
+                    target: 'origin',
+                    above: 'rgba(232, 232, 232, 0.08)'
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 250 },
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 1000,
+                    grid: { color: '#222' },
+                    ticks: { color: '#888', font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#888', font: { size: 9 }, maxTicksLimit: 8 }
+                }
+            }
+        }
     });
 }
 
@@ -205,7 +259,8 @@ function configurarServos() {
     document.querySelectorAll('.servo-button').forEach(btn => {
         btn.addEventListener('click', () => {
             const num = btn.getAttribute('data-servo');
-            servos[num] = servos[num] === 0 ? 90 : 0;
+            // Se está aberta (80°), fecha em 155° — Se está fechada (155°), abre em 80°
+            servos[num] = servos[num] === 80 ? 155 : 80;
             atualizarValvulaVisual(num, servos[num]);
         });
     });
@@ -221,25 +276,21 @@ function configurarBotoes() {
     if (btnEmergencia) btnEmergencia.addEventListener('click', emergencia);
     if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioPDF);
 
-    // X vermelho → modal bonito de confirmação
     if (btnFechar) {
         btnFechar.addEventListener('click', () => {
             abrirModalFechar();
         });
     }
 
-    // Botões do modal de confirmação
     const btnCancelar = document.getElementById('btnCancelarFechar');
     const btnConfirmar = document.getElementById('btnConfirmarFechar');
 
     if (btnCancelar) btnCancelar.addEventListener('click', fecharModalFechar);
     if (btnConfirmar) {
         btnConfirmar.addEventListener('click', () => {
-            // Envia mensagem pro C# fechar o app
             if (window.chrome && window.chrome.webview) {
                 window.chrome.webview.postMessage('fechar_app');
             } else {
-                // Fallback no navegador
                 window.close();
             }
         });
@@ -263,16 +314,30 @@ function fecharModalFechar() {
 //  MANGUEIRAS
 // =============================================
 function validarMangueiras() {
-    const btnIniciar = document.getElementById('btnIniciar');
-    if (!btnIniciar) return;
-
-    const todasConectadas = mangueiras[1] && mangueiras[2] && mangueiras[3];
-    btnIniciar.disabled = !todasConectadas;
+    validarBotaoIniciar();
 }
 
 // =============================================
 //  VÁLVULAS
 // =============================================
+function atualizarStatusValvulas() {
+    // Verificar e atualizar visual das válvulas
+    [1, 2, 3].forEach(n => {
+        atualizarValvulaVisual(n, servos[n]);
+    });
+    validarBotaoIniciar();
+}
+
+function validarBotaoIniciar() {
+    const btnIniciar = document.getElementById('btnIniciar');
+    if (!btnIniciar) return;
+
+    const todasConectadas = mangueiras[1] && mangueiras[2] && mangueiras[3];
+    const umaAberta = servos[1] === 80 || servos[2] === 80 || servos[3] === 80;  // Apenas UMA precisa estar aberta
+
+    btnIniciar.disabled = !(todasConectadas && umaAberta);
+}
+
 function atualizarValvulaVisual(num, angulo) {
     const angleEl = document.getElementById(`valveAngle${num}`);
     const angleTxtEl = document.getElementById(`valveAngleTxt${num}`);
@@ -294,11 +359,13 @@ function atualizarValvulaVisual(num, angulo) {
         if (flowEl) flowEl.textContent = '-- LPM';
     }
 
-    const status = angulo < 90 ? 'FECHADA' : 'ABERTA';
+    const status = angulo > 100 ? 'FECHADA' : 'ABERTA';
     if (statusEl) {
         statusEl.textContent = status;
         statusEl.className = 'valve-status ' + (status === 'ABERTA' ? 'on' : 'off');
     }
+
+    validarBotaoIniciar();
 }
 
 // =============================================
@@ -307,6 +374,12 @@ function atualizarValvulaVisual(num, angulo) {
 function iniciarProcesso() {
     if (!mangueiras[1] || !mangueiras[2] || !mangueiras[3]) {
         alert('⚠️ Conecte todas as 3 mangueiras!');
+        return;
+    }
+
+    // Validar se pelo menos UMA válvula está aberta
+    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) {
+        alert('⚠️ Abra pelo menos 1 válvula para iniciar!');
         return;
     }
 
@@ -322,14 +395,13 @@ function iniciarProcesso() {
         statusEl.style.color = '';
     }
 
-    // Limpa o gráfico ao iniciar
+    // Limpar gráfico
     if (window.vacuoChart) {
         window.vacuoChart.data.labels = [];
         window.vacuoChart.data.datasets[0].data = [];
         window.vacuoChart.update();
     }
 
-    // Timer
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         tempoDecorrido++;
@@ -340,7 +412,6 @@ function iniciarProcesso() {
         if (timerEl) timerEl.textContent = `${h}:${m}:${s}`;
     }, 1000);
 
-    // Simulação só começa aqui
     if (window.simInterval) clearInterval(window.simInterval);
     window.simInterval = setInterval(simularDados, 1000);
 
@@ -375,61 +446,55 @@ function emergencia() {
         statusEl.style.color = '#ff6b6b';
     }
 
-    servos[1] = 0;
-    servos[2] = 0;
-    servos[3] = 0;
-    atualizarValvulaVisual(1, 0);
-    atualizarValvulaVisual(2, 0);
-    atualizarValvulaVisual(3, 0);
+    servos[1] = 155;
+    servos[2] = 155;
+    servos[3] = 155;
+    atualizarValvulaVisual(1, 155);
+    atualizarValvulaVisual(2, 155);
+    atualizarValvulaVisual(3, 155);
 
     mostrarDadosIniciais();
     console.log('🚨 EMERGÊNCIA ATIVADA');
 }
 
 // =============================================
-//  GRÁFICO
+//  GAUGES (BARRAS VERTICAIS)
 // =============================================
-function inicializarGrafico() {
-    const canvas = document.getElementById('vacuoChart');
-    if (!canvas) return;
+function atualizarGauges(temp, fluxo1, fluxo2, fluxo3, diferencial) {
+    // Gauge 2: Temperatura (0-100°C)
+    const percentTemp = Math.min((temp / 100) * 100, 100);
+    const gauge2 = document.getElementById('gaugeBar2');
+    if (gauge2) gauge2.style.height = percentTemp + '%';
+    const value2 = document.getElementById('gaugeValue2');
+    if (value2) value2.textContent = temp.toFixed(1) + ' °C';
 
-    const ctx = canvas.getContext('2d');
-    window.vacuoChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Pressão (mBar)',
-                data: [],
-                borderColor: '#e8e8e8',
-                borderWidth: 2,
-                tension: 0.4,
-                pointRadius: 0,
-                fill: {
-                    target: 'origin',
-                    above: 'rgba(232, 232, 232, 0.04)'
-                }
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 250 },
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 1000,
-                    grid: { color: '#1e1e1e' },
-                    ticks: { color: '#444', font: { size: 10 } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#444', font: { size: 9 }, maxTicksLimit: 8 }
-                }
-            }
-        }
-    });
+    // Gauge 3: Fluxo M1 (0-20 LPM)
+    const percentFluxo1 = Math.min((fluxo1 / 20) * 100, 100);
+    const gauge3 = document.getElementById('gaugeBar3');
+    if (gauge3) gauge3.style.height = percentFluxo1 + '%';
+    const value3 = document.getElementById('gaugeValue3');
+    if (value3) value3.textContent = fluxo1.toFixed(1) + ' LPM';
+
+    // Gauge 4: Fluxo M2 (0-20 LPM)
+    const percentFluxo2 = Math.min((fluxo2 / 20) * 100, 100);
+    const gauge4 = document.getElementById('gaugeBar4');
+    if (gauge4) gauge4.style.height = percentFluxo2 + '%';
+    const value4 = document.getElementById('gaugeValue4');
+    if (value4) value4.textContent = fluxo2.toFixed(1) + ' LPM';
+
+    // Gauge 5: Fluxo M3 (0-20 LPM)
+    const percentFluxo3 = Math.min((fluxo3 / 20) * 100, 100);
+    const gauge5 = document.getElementById('gaugeBar5');
+    if (gauge5) gauge5.style.height = percentFluxo3 + '%';
+    const value5 = document.getElementById('gaugeValue5');
+    if (value5) value5.textContent = fluxo3.toFixed(1) + ' LPM';
+
+    // Gauge 6: Pressão Diferencial (0-5 mBar)
+    const percentDif = Math.min((diferencial / 5) * 100, 100);
+    const gauge6 = document.getElementById('gaugeBar6');
+    if (gauge6) gauge6.style.height = percentDif + '%';
+    const value6 = document.getElementById('gaugeValue6');
+    if (value6) value6.textContent = diferencial.toFixed(2) + ' mBar';
 }
 
 // =============================================
@@ -438,17 +503,34 @@ function inicializarGrafico() {
 function simularDados() {
     if (!processoEmAndamento) return;
 
-    const pressao = 100 + Math.random() * 600;
+    const pressaoCamara = 100 + Math.random() * 600;
+    const tempOleo = 50 + Math.random() * 40;
+
+    // DIFERENÇA DE 0.4 mBar ENTRE MANGUEIRAS
+    const pressaoM1 = pressaoCamara * 0.6;
+    const pressaoM2 = (pressaoCamara * 0.5) - 0.4;  // 0.4 mBar menor que M1
+    const pressaoM3 = (pressaoCamara * 0.55) + 0.4;  // 0.4 mBar maior que M1
+
+    const fluxoM1 = (pressaoM1 / 1000) * 5;
+    const fluxoM2 = (pressaoM2 / 1000) * 4.5;
+    const fluxoM3 = (pressaoM3 / 1000) * 4.8;
+
+    // Diferencial: maior pressão - menor pressão
+    const maiorPressao = Math.max(pressaoM1, pressaoM2, pressaoM3);
+    const menorPressao = Math.min(pressaoM1, pressaoM2, pressaoM3);
+    const diferencialPressao = maiorPressao - menorPressao;
+
     dadosAtual = {
         cicloId: cicloAtualId,
         estadoMaquina: "Ligado",
-        pressaoCamaraMbar: pressao,
-        pressaoTubo1Mbar: pressao * 0.6,
-        fluxoTubo1LPM: (pressao / 1000) * 5,
-        pressaoTubo2Mbar: pressao * 0.5,
-        fluxoTubo2LPM: (pressao / 1000) * 4.5,
-        pressaoTubo3Mbar: pressao * 0.55,
-        fluxoTubo3LPM: (pressao / 1000) * 4.8,
+        pressaoCamaraMbar: pressaoCamara,
+        pressaoTubo1Mbar: pressaoM1,
+        fluxoTubo1LPM: fluxoM1,
+        pressaoTubo2Mbar: pressaoM2,
+        fluxoTubo2LPM: fluxoM2,
+        pressaoTubo3Mbar: pressaoM3,
+        fluxoTubo3LPM: fluxoM3,
+        temperaturaOleo: tempOleo,
         bombaLigada: true,
         valvulaAberta: true,
         servoAngulo: servos[1] || 0
@@ -458,15 +540,30 @@ function simularDados() {
 }
 
 function atualizarDados(dados) {
-    const pressaoEl = document.getElementById('pressaoValue');
-    if (pressaoEl) pressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2) + ' MBarr';
-
     const infoPressaoEl = document.getElementById('infoPressao');
-    if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(1) + ' MBarr';
+    if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2);
+
+    const pressaoValueEl = document.getElementById('pressaoValue');
+    if (pressaoValueEl) pressaoValueEl.textContent = dados.pressaoCamaraMbar.toFixed(2) + ' MBarr';
 
     const infoTempEl = document.getElementById('infoTemp');
-    if (infoTempEl) infoTempEl.textContent = '65.0°C';
+    if (infoTempEl) infoTempEl.textContent = dados.temperaturaOleo.toFixed(1);
 
+    const infoPressaoM1 = document.getElementById('infoPressaoM1');
+    if (infoPressaoM1) infoPressaoM1.textContent = dados.pressaoTubo1Mbar.toFixed(2);
+
+    const infoPressaoM2 = document.getElementById('infoPressaoM2');
+    if (infoPressaoM2) infoPressaoM2.textContent = dados.pressaoTubo2Mbar.toFixed(2);
+
+    const infoPressaoM3 = document.getElementById('infoPressaoM3');
+    if (infoPressaoM3) infoPressaoM3.textContent = dados.pressaoTubo3Mbar.toFixed(2);
+
+    const fase = dados.pressaoCamaraMbar < 200 ? 'SUCÇÃO' :
+        dados.pressaoCamaraMbar <= 500 ? 'ESTÁVEL' : 'PRESSÃO ALTA';
+    const infoFaseEl = document.getElementById('infoFase');
+    if (infoFaseEl) infoFaseEl.textContent = fase;
+
+    // Atualizar gráfico de pressão
     if (window.vacuoChart) {
         const agora = new Date().toLocaleTimeString();
         window.vacuoChart.data.labels.push(agora);
@@ -479,10 +576,29 @@ function atualizarDados(dados) {
         window.vacuoChart.update();
     }
 
-    const fase = dados.pressaoCamaraMbar < 200 ? 'SUCÇÃO' :
-        dados.pressaoCamaraMbar <= 500 ? 'ESTÁVEL' : 'PRESSÃO ALTA';
-    const infoFaseEl = document.getElementById('infoFase');
-    if (infoFaseEl) infoFaseEl.textContent = fase;
+    // Calcular diferencial
+    const maiorPressao = Math.max(dados.pressaoTubo1Mbar, dados.pressaoTubo2Mbar, dados.pressaoTubo3Mbar);
+    const menorPressao = Math.min(dados.pressaoTubo1Mbar, dados.pressaoTubo2Mbar, dados.pressaoTubo3Mbar);
+    const diferencial = maiorPressao - menorPressao;
+
+    // Atualizar gauges com TODOS os 5 parâmetros
+    atualizarGauges(
+        dados.temperaturaOleo,
+        dados.fluxoTubo1LPM,
+        dados.fluxoTubo2LPM,
+        dados.fluxoTubo3LPM,
+        diferencial
+    );
+
+    // Atualizar valores das válvulas
+    [1, 2, 3].forEach(n => {
+        const p = document.getElementById(`valvePressure${n}`);
+        const f = document.getElementById(`valveFlow${n}`);
+        const pressaoKey = `pressaoTubo${n}Mbar`;
+        const fluxoKey = `fluxoTubo${n}LPM`;
+        if (p && dados[pressaoKey]) p.textContent = dados[pressaoKey].toFixed(1) + ' mBar';
+        if (f && dados[fluxoKey]) f.textContent = dados[fluxoKey].toFixed(1) + ' LPM';
+    });
 }
 
 // =============================================
@@ -504,13 +620,13 @@ async function gerarRelatorioPDF() {
     doc.text(`Operador: ${usuarioAtual || 'Não identificado'}`, 105, 31, { align: 'center' });
 
     let yPos = 50;
-    doc.setTextColor(232, 232, 232);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text('DADOS DO CICLO', 20, yPos);
 
     yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(170, 170, 170);
+    doc.setTextColor(0, 0, 0);
 
     doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, yPos); yPos += 8;
     doc.text(`Ciclo ID: ${cicloAtualId}`, 20, yPos); yPos += 8;
@@ -523,34 +639,36 @@ async function gerarRelatorioPDF() {
     doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, yPos);
 
     yPos += 15;
-    doc.setTextColor(232, 232, 232);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text('PRESSÕES E FLUXOS', 20, yPos);
 
     yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(170, 170, 170);
+    doc.setTextColor(0, 0, 0);
 
     if (dadosAtual) {
         doc.text(`Câmara: ${dadosAtual.pressaoCamaraMbar.toFixed(2)} mBar`, 20, yPos); yPos += 8;
         doc.text(`Tubo 1: ${dadosAtual.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo1LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
         doc.text(`Tubo 2: ${dadosAtual.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo2LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
-        doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, yPos);
+        doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
+        doc.text(`Temperatura Óleo: ${dadosAtual.temperaturaOleo.toFixed(1)} °C`, 20, yPos);
     } else {
         doc.text('Câmara: --  (processo não iniciado)', 20, yPos); yPos += 8;
         doc.text('Tubo 1: --  |  Fluxo: --', 20, yPos); yPos += 8;
         doc.text('Tubo 2: --  |  Fluxo: --', 20, yPos); yPos += 8;
-        doc.text('Tubo 3: --  |  Fluxo: --', 20, yPos);
+        doc.text('Tubo 3: --  |  Fluxo: --', 20, yPos); yPos += 8;
+        doc.text('Temperatura Óleo: -- °C', 20, yPos);
     }
 
     yPos += 15;
-    doc.setTextColor(232, 232, 232);
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text('STATUS DOS COMPONENTES', 20, yPos);
 
     yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(170, 170, 170);
+    doc.setTextColor(0, 0, 0);
 
     doc.text(`Bomba: ${dadosAtual ? (dadosAtual.bombaLigada ? 'LIGADA' : 'DESLIGADA') : '--'}`, 20, yPos); yPos += 8;
     doc.text(`Válvula: ${dadosAtual ? (dadosAtual.valvulaAberta ? 'ABERTA' : 'FECHADA') : '--'}`, 20, yPos); yPos += 8;
