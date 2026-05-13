@@ -38,13 +38,84 @@
         </div>
     </div>
 
+    <!-- MODAL TEMPO ENCERRADO -->
+    <div class="modal-overlay hidden" id="modalTempoEncerrado">
+        <div class="modal-confirm">
+            <div class="modal-confirm-icon modal-icon-ok">!</div>
+            <h3>TEMPO ENCERRADO</h3>
+            <p>O tempo limite configurado foi atingido. O processo foi encerrado automaticamente.</p>
+            <div class="modal-confirm-buttons">
+                <button class="btn-confirm-ok btn-confirm-start" id="btnFecharTempoEncerrado">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DESATIVAR EMERGENCIA -->
+    <div class="modal-overlay hidden" id="modalDesativarEmergencia">
+        <div class="modal-confirm modal-confirm-emergency">
+            <div class="modal-confirm-icon">!</div>
+            <h3>DESATIVAR EMERGENCIA</h3>
+            <p>Confirme que a situação foi resolvida e que e seguro retomar as operações.</p>
+            <div class="modal-confirm-buttons">
+                <button class="btn-confirm-cancel" id="btnCancelarEmergencia">Cancelar</button>
+                <button class="btn-confirm-ok" id="btnConfirmarDesativarEmergencia">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TIMER -->
+    <div class="modal-overlay hidden" id="modalTimer">
+        <div class="modal-confirm">
+            <div class="modal-confirm-icon" style="border-color:#1e4a30;color:#6a9;">T</div>
+            <h3>TEMPO DE OPERAÇÃO</h3>
+            <p>Defina o tempo limite para este ciclo.</p>
+            <div class="drum-picker-group">
+                <div class="drum-picker-col">
+                    <label class="drum-label">HORAS</label>
+                    <div class="drum-wrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-fade-bot"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumHoras"></div>
+                    </div>
+                </div>
+                <div class="drum-sep">:</div>
+                <div class="drum-picker-col">
+                    <label class="drum-label">MIN</label>
+                    <div class="drum-wrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-fade-bot"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumMinutos"></div>
+                    </div>
+                </div>
+                <div class="drum-sep">:</div>
+                <div class="drum-picker-col">
+                    <label class="drum-label">SEG</label>
+                    <div class="drum-wrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-fade-bot"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumSegundos"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drum-hint-error" id="drumHint" style="display:none;">Defina um tempo antes de iniciar.</div>
+            <div class="modal-confirm-buttons">
+                <button class="btn-confirm-cancel" id="btnCancelarTimer">Cancelar</button>
+                <button class="btn-confirm-ok btn-confirm-start" id="btnConfirmarTimer">INICIAR</button>
+            </div>
+        </div>
+    </div>
+
     <div class="top-info">
         <span id="relogioDisplay">TSEA Energy</span>
         <span id="usuarioLogado" class="usuario-badge">--</span>
     </div>
 
     <header class="panel header-panel">
-        <div class="header-title">CONTROLE DE VACUO</div>
+        <div class="header-title">CONTROLE DE VÁCUO</div>
         <div class="btn-close" id="btnFechar">X</div>
     </header>
 
@@ -60,10 +131,10 @@
         <div class="dashboard-grid">
 
             <div class="panel left-panel">
-                <div class="section-title">MANGUEIRAS</div>
-                <button class="mangueira-button conectada" id="btnMangueira1" data-mangueira="1">Mangueira 1</button>
-                <button class="mangueira-button conectada" id="btnMangueira2" data-mangueira="2">Mangueira 2</button>
-                <button class="mangueira-button conectada" id="btnMangueira3" data-mangueira="3">Mangueira 3</button>
+                <div class="section-title">TUBOS</div>
+                <button class="mangueira-button" id="btnMangueira1" data-mangueira="1">Tubo 1</button>
+                <button class="mangueira-button" id="btnMangueira2" data-mangueira="2">Tubo 2</button>
+                <button class="mangueira-button" id="btnMangueira3" data-mangueira="3">Tubo 3</button>
 
                 <hr class="divider">
 
@@ -85,12 +156,13 @@
                 <div class="timer-container">
                     <span class="timer-label">TEMPO DE OPERACAO</span>
                     <span class="timer-value" id="timerDisplay">00:00:00</span>
+                    <span class="timer-limit" id="timerLimit"></span>
                 </div>
             </div>
 
             <div class="panel center-panel">
                 <div class="chart-header">
-                    <div class="chart-title">PRESSÃO ABSOLUTA DO TANQUE</div>
+                    <div class="chart-title">PRESSAO ABSOLUTA DO TANQUE</div>
                     <div class="chart-main-value" id="pressaoValue">--</div>
                 </div>
                 <div class="chart-container">
@@ -106,14 +178,14 @@
                             <div class="gauge-bar" id="gaugeBar2"></div>
                         </div>
                         <div class="gauge-label">TEMPERATURA</div>
-                        <div class="gauge-value" id="gaugeValue2">-- °C</div>
+                        <div class="gauge-value" id="gaugeValue2">-- C</div>
                     </div>
 
                     <div class="gauge-item">
                         <div class="gauge-bar-wrapper">
                             <div class="gauge-bar" id="gaugeBar3"></div>
                         </div>
-                        <div class="gauge-label">FLUXO M1</div>
+                        <div class="gauge-label">FLUXO T1</div>
                         <div class="gauge-value" id="gaugeValue3">-- LPM</div>
                     </div>
 
@@ -121,7 +193,7 @@
                         <div class="gauge-bar-wrapper">
                             <div class="gauge-bar" id="gaugeBar4"></div>
                         </div>
-                        <div class="gauge-label">FLUXO M2</div>
+                        <div class="gauge-label">FLUXO T2</div>
                         <div class="gauge-value" id="gaugeValue4">-- LPM</div>
                     </div>
 
@@ -129,7 +201,7 @@
                         <div class="gauge-bar-wrapper">
                             <div class="gauge-bar" id="gaugeBar5"></div>
                         </div>
-                        <div class="gauge-label">FLUXO M3</div>
+                        <div class="gauge-label">FLUXO T3</div>
                         <div class="gauge-value" id="gaugeValue5">-- LPM</div>
                     </div>
 
@@ -137,7 +209,7 @@
                         <div class="gauge-bar-wrapper">
                             <div class="gauge-bar" id="gaugeBar6"></div>
                         </div>
-                        <div class="gauge-label">PRESSÃO DIFER.</div>
+                        <div class="gauge-label">PRESSAO DIFER.</div>
                         <div class="gauge-value" id="gaugeValue6">-- mBar</div>
                     </div>
                 </div>
@@ -152,20 +224,20 @@
                 <div class="info-block">
                     <span class="info-label">TEMP. OLEO</span>
                     <span class="info-value" id="infoTemp">--</span>
-                    <span class="info-unit">°C</span>
+                    <span class="info-unit">C</span>
                 </div>
                 <div class="info-block">
-                    <span class="info-label">PRESSAO M1</span>
+                    <span class="info-label">PRESSAO T1</span>
                     <span class="info-value" id="infoPressaoM1">--</span>
                     <span class="info-unit">mBar</span>
                 </div>
                 <div class="info-block">
-                    <span class="info-label">PRESSAO M2</span>
+                    <span class="info-label">PRESSAO T2</span>
                     <span class="info-value" id="infoPressaoM2">--</span>
                     <span class="info-unit">mBar</span>
                 </div>
                 <div class="info-block">
-                    <span class="info-label">PRESSAO M3</span>
+                    <span class="info-label">PRESSAO T3</span>
                     <span class="info-value" id="infoPressaoM3">--</span>
                     <span class="info-unit">mBar</span>
                 </div>
@@ -190,13 +262,13 @@
                     <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
                         <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
                         <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
-                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle1">80°</text>
+                        <text x="100" y="136" text-anchor="middle" fill="#e8e8e8" font-size="16" font-weight="bold" id="valveAngle1">80</text>
                         <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator1" />
                     </svg>
                 </div>
                 <button class="servo-button" id="btnServo1" data-servo="1">ALTERNAR (80 / 115)</button>
                 <div class="valve-info">
-                    <p><span>Angulo</span><strong id="valveAngleTxt1">80°</strong></p>
+                    <p><span>Angulo</span><strong id="valveAngleTxt1">80</strong></p>
                     <p><span>Pressao</span><strong id="valvePressure1">--</strong></p>
                     <p><span>Fluxo</span><strong id="valveFlow1">--</strong></p>
                 </div>
@@ -211,13 +283,13 @@
                     <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
                         <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
                         <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
-                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle2">80°</text>
+                        <text x="100" y="136" text-anchor="middle" fill="#e8e8e8" font-size="16" font-weight="bold" id="valveAngle2">80</text>
                         <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator2" />
                     </svg>
                 </div>
                 <button class="servo-button" id="btnServo2" data-servo="2">ALTERNAR (80 / 115)</button>
                 <div class="valve-info">
-                    <p><span>Angulo</span><strong id="valveAngleTxt2">80°</strong></p>
+                    <p><span>Angulo</span><strong id="valveAngleTxt2">80</strong></p>
                     <p><span>Pressao</span><strong id="valvePressure2">--</strong></p>
                     <p><span>Fluxo</span><strong id="valveFlow2">--</strong></p>
                 </div>
@@ -232,13 +304,13 @@
                     <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
                         <rect x="70" y="20" width="60" height="200" fill="none" stroke="#e8e8e8" stroke-width="8" rx="30" />
                         <circle cx="100" cy="130" r="35" fill="#141414" stroke="#e8e8e8" stroke-width="3" />
-                        <text x="100" y="140" text-anchor="middle" fill="#e8e8e8" font-size="20" font-weight="bold" id="valveAngle3">80°</text>
+                        <text x="100" y="136" text-anchor="middle" fill="#e8e8e8" font-size="16" font-weight="bold" id="valveAngle3">80</text>
                         <line x1="100" y1="95" x2="100" y2="55" stroke="#e8e8e8" stroke-width="4" id="valveIndicator3" />
                     </svg>
                 </div>
                 <button class="servo-button" id="btnServo3" data-servo="3">ALTERNAR (155 / 80)</button>
                 <div class="valve-info">
-                    <p><span>Angulo</span><strong id="valveAngleTxt3">80°</strong></p>
+                    <p><span>Angulo</span><strong id="valveAngleTxt3">80</strong></p>
                     <p><span>Pressao</span><strong id="valvePressure3">--</strong></p>
                     <p><span>Fluxo</span><strong id="valveFlow3">--</strong></p>
                 </div>
