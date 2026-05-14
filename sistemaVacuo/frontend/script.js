@@ -278,7 +278,7 @@ function configurarBotoes() {
     // Iniciar abre o modal de timer primeiro
     if (btnIniciar) btnIniciar.addEventListener('click', abrirModalTimer);
     if (btnEmergencia) btnEmergencia.addEventListener('click', emergencia);
-    if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioPDF);
+    if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioMensal);
 
     if (btnFechar) {
         btnFechar.addEventListener('click', () => {
@@ -591,15 +591,15 @@ function iniciarProcesso() {
 
     // Exibir tempo limite configurado
     const timerLimitEl = document.getElementById('timerLimit');
-    if (timerLimitEl) {
-        if (tempoLimite > 0) {
-            const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
-            const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
-            const ls = (tempoLimite % 60).toString().padStart(2, '0');
-            timerLimitEl.textContent = `LIMITE: ${lh}:${lm}:${ls}`;
-        } else {
-            timerLimitEl.textContent = 'SEM LIMITE';
-        }
+    if (timerLimitEl) timerLimitEl.textContent = '';
+
+    // Mostrar contagem regressiva imediatamente
+    const timerElInicial = document.getElementById('timerDisplay');
+    if (timerElInicial) {
+        const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
+        const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
+        const ls = (tempoLimite % 60).toString().padStart(2, '0');
+        timerElInicial.textContent = `${lh}:${lm}:${ls}`;
     }
 
     // Limpar grafico
@@ -613,15 +613,21 @@ function iniciarProcesso() {
     timerInterval = setInterval(() => {
         tempoDecorrido++;
 
-        const h = Math.floor(tempoDecorrido / 3600).toString().padStart(2, '0');
-        const m = Math.floor((tempoDecorrido % 3600) / 60).toString().padStart(2, '0');
-        const s = (tempoDecorrido % 60).toString().padStart(2, '0');
+        // Contagem regressiva
+        const restante = Math.max(tempoLimite - tempoDecorrido, 0);
+        const h = Math.floor(restante / 3600).toString().padStart(2, '0');
+        const m = Math.floor((restante % 3600) / 60).toString().padStart(2, '0');
+        const s = (restante % 60).toString().padStart(2, '0');
         const timerEl = document.getElementById('timerDisplay');
         if (timerEl) timerEl.textContent = `${h}:${m}:${s}`;
 
         // Verificar se atingiu o limite
-        if (tempoLimite > 0 && tempoDecorrido >= tempoLimite) {
+        if (tempoDecorrido >= tempoLimite) {
             pararProcesso();
+
+            const timerEl2 = document.getElementById('timerDisplay');
+            if (timerEl2) timerEl2.textContent = '00:00:00';
+
             const statusEl2 = document.getElementById('status-estado');
             if (statusEl2) {
                 statusEl2.textContent = 'CONCLUIDO';
@@ -629,6 +635,9 @@ function iniciarProcesso() {
             }
             const timerLimitEl2 = document.getElementById('timerLimit');
             if (timerLimitEl2) timerLimitEl2.textContent = 'TEMPO ENCERRADO';
+
+            // Relatório automático
+            gerarRelatorioPDF();
             mostrarModalTempoEncerrado();
         }
     }, 1000);
@@ -915,15 +924,54 @@ function atualizarDados(dados) {
 }
 
 // =============================================
-//  RELATORIO PDF
+//  HISTORICO DE CICLOS (localStorage)
+// =============================================
+function salvarCicloNoHistorico() {
+    const agora = new Date();
+    const chave = `ciclos_vacuo_${agora.getFullYear()}_${String(agora.getMonth() + 1).padStart(2, '0')}`;
+
+    let ciclos = [];
+    try { ciclos = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) { }
+
+    const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
+    const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
+    const ls = (tempoLimite % 60).toString().padStart(2, '0');
+
+    ciclos.push({
+        id: cicloAtualId,
+        operador: usuarioAtual || 'Nao identificado',
+        dataHora: agora.toLocaleString('pt-BR'),
+        tempoOperacao: `${lh}:${lm}:${ls}`,
+        pressaoCamara: dadosAtual ? dadosAtual.pressaoCamaraMbar.toFixed(2) : '--',
+        pressaoT1: dadosAtual ? dadosAtual.pressaoTubo1Mbar.toFixed(2) : '--',
+        fluxoT1: dadosAtual ? dadosAtual.fluxoTubo1LPM.toFixed(1) : '--',
+        pressaoT2: dadosAtual ? dadosAtual.pressaoTubo2Mbar.toFixed(2) : '--',
+        fluxoT2: dadosAtual ? dadosAtual.fluxoTubo2LPM.toFixed(1) : '--',
+        pressaoT3: dadosAtual ? dadosAtual.pressaoTubo3Mbar.toFixed(2) : '--',
+        fluxoT3: dadosAtual ? dadosAtual.fluxoTubo3LPM.toFixed(1) : '--',
+        temperatura: dadosAtual ? dadosAtual.temperaturaOleo.toFixed(1) : '--',
+        tubo1: mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO',
+        tubo2: mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO',
+        tubo3: mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO',
+        servo: dadosAtual ? dadosAtual.servoAngulo + 'graus' : '--',
+    });
+
+    localStorage.setItem(chave, JSON.stringify(ciclos));
+    cicloAtualId++;
+    console.log('Ciclo salvo. Total no mes:', ciclos.length);
+}
+
+// =============================================
+//  RELATORIO PDF — CICLO UNICO (automatico ao fim)
 // =============================================
 async function gerarRelatorioPDF() {
+    salvarCicloNoHistorico();
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
     doc.setFillColor(20, 20, 20);
     doc.rect(0, 0, 210, 40, 'F');
-
     doc.setTextColor(232, 232, 232);
     doc.setFontSize(20);
     doc.text('RELATORIO - SISTEMA DE VACUO', 105, 15, { align: 'center' });
@@ -935,66 +983,41 @@ async function gerarRelatorioPDF() {
     let yPos = 50;
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('DADOS DO CICLO', 20, yPos);
-
-    yPos += 10;
+    doc.text('DADOS DO CICLO', 20, yPos); yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+
+    const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
+    const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
+    const ls = (tempoLimite % 60).toString().padStart(2, '0');
 
     doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, yPos); yPos += 8;
     doc.text(`Ciclo ID: ${cicloAtualId}`, 20, yPos); yPos += 8;
     doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 20, yPos); yPos += 8;
-
-    const timerEl = document.getElementById('timerDisplay');
-    doc.text(`Tempo de Operacao: ${timerEl ? timerEl.textContent : '00:00:00'}`, 20, yPos); yPos += 8;
-
-    if (tempoLimite > 0) {
-        const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
-        const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
-        const ls = (tempoLimite % 60).toString().padStart(2, '0');
-        doc.text(`Tempo Limite Configurado: ${lh}:${lm}:${ls}`, 20, yPos); yPos += 8;
-    } else {
-        doc.text(`Tempo Limite Configurado: Indeterminado`, 20, yPos); yPos += 8;
-    }
+    doc.text(`Tempo de Operacao: ${lh}:${lm}:${ls}`, 20, yPos); yPos += 8;
 
     const statusEl = document.getElementById('status-estado');
-    doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, yPos);
+    doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, yPos); yPos += 15;
 
-    yPos += 15;
-    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('PRESSOES E FLUXOS', 20, yPos);
-
-    yPos += 10;
+    doc.text('PRESSOES E FLUXOS', 20, yPos); yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
 
     if (dadosAtual) {
         doc.text(`Camara: ${dadosAtual.pressaoCamaraMbar.toFixed(2)} mBar`, 20, yPos); yPos += 8;
         doc.text(`Tubo 1: ${dadosAtual.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo1LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
         doc.text(`Tubo 2: ${dadosAtual.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo2LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
         doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, yPos); yPos += 8;
-        doc.text(`Temperatura Oleo: ${dadosAtual.temperaturaOleo.toFixed(1)} C`, 20, yPos);
+        doc.text(`Temperatura Oleo: ${dadosAtual.temperaturaOleo.toFixed(1)} C`, 20, yPos); yPos += 15;
     } else {
-        doc.text('Camara: --  (processo nao iniciado)', 20, yPos); yPos += 8;
-        doc.text('Tubo 1: --  |  Fluxo: --', 20, yPos); yPos += 8;
-        doc.text('Tubo 2: --  |  Fluxo: --', 20, yPos); yPos += 8;
-        doc.text('Tubo 3: --  |  Fluxo: --', 20, yPos); yPos += 8;
-        doc.text('Temperatura Oleo: -- C', 20, yPos);
+        doc.text('Nenhum dado de processo disponivel.', 20, yPos); yPos += 15;
     }
 
-    yPos += 15;
-    doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
-    doc.text('STATUS DOS COMPONENTES', 20, yPos);
-
-    yPos += 10;
+    doc.text('STATUS DOS COMPONENTES', 20, yPos); yPos += 10;
     doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
 
     doc.text(`Bomba: ${dadosAtual ? (dadosAtual.bombaLigada ? 'LIGADA' : 'DESLIGADA') : '--'}`, 20, yPos); yPos += 8;
-    doc.text(`Valvula: ${dadosAtual ? (dadosAtual.valvulaAberta ? 'ABERTA' : 'FECHADA') : '--'}`, 20, yPos); yPos += 8;
-    doc.text(`Servo: ${dadosAtual ? dadosAtual.servoAngulo + ' graus' : '--'}`, 20, yPos); yPos += 8;
+    doc.text(`Servo: ${dadosAtual ? dadosAtual.servoAngulo + 'graus' : '--'}`, 20, yPos); yPos += 8;
     doc.text(`Tubo 1: ${mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, yPos); yPos += 8;
     doc.text(`Tubo 2: ${mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, yPos); yPos += 8;
     doc.text(`Tubo 3: ${mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, yPos);
@@ -1003,10 +1026,91 @@ async function gerarRelatorioPDF() {
     doc.setFontSize(8);
     doc.text('Relatorio gerado automaticamente - TSEA Energy', 105, 280, { align: 'center' });
 
-    const filename = `relatorio_vacuo_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const filename = `ciclo_${cicloAtualId}_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(filename);
+    console.log('PDF ciclo gerado:', filename);
+}
 
-    console.log('PDF gerado:', filename);
+// =============================================
+//  RELATORIO MENSAL (botao manual)
+// =============================================
+async function gerarRelatorioMensal() {
+    const { jsPDF } = window.jspdf;
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesAtual = agora.getMonth() + 1;
+    const chave = `ciclos_vacuo_${anoAtual}_${String(mesAtual).padStart(2, '0')}`;
+
+    let ciclos = [];
+    try { ciclos = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) { }
+
+    const meses = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const nomeMes = meses[mesAtual - 1];
+
+    const doc = new jsPDF();
+
+    // Cabecalho
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, 210, 45, 'F');
+    doc.setTextColor(232, 232, 232);
+    doc.setFontSize(18);
+    doc.text('RELATORIO MENSAL - SISTEMA DE VACUO', 105, 14, { align: 'center' });
+    doc.setFontSize(11);
+    doc.setTextColor(170, 170, 170);
+    doc.text('TSEA Energy', 105, 23, { align: 'center' });
+    doc.text(`${nomeMes} / ${anoAtual}   —   Gerado em: ${agora.toLocaleString('pt-BR')}`, 105, 31, { align: 'center' });
+    doc.text(`Operador solicitante: ${usuarioAtual || 'Nao identificado'}`, 105, 38, { align: 'center' });
+
+    let yPos = 55;
+
+    if (ciclos.length === 0) {
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+        doc.text(`Nenhum ciclo registrado em ${nomeMes} de ${anoAtual}.`, 20, yPos);
+    } else {
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+        doc.text(`Total de ciclos em ${nomeMes}: ${ciclos.length}`, 20, yPos); yPos += 14;
+
+        ciclos.forEach((c, i) => {
+            // Nova pagina se necessario
+            if (yPos > 255) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            // Separador do ciclo
+            doc.setFillColor(235, 235, 235);
+            doc.rect(15, yPos - 4, 180, 7, 'F');
+            doc.setTextColor(40, 40, 40);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text(`CICLO #${c.id}   —   ${c.dataHora}   —   Operador: ${c.operador}`, 18, yPos + 1);
+            doc.setFont(undefined, 'normal');
+            yPos += 11;
+
+            doc.setTextColor(60, 60, 60);
+            doc.setFontSize(9);
+            doc.text(`Duracao: ${c.tempoOperacao}`, 20, yPos); yPos += 6;
+            doc.text(`Pressao Camara: ${c.pressaoCamara} mBar   |   Temperatura: ${c.temperatura} C`, 20, yPos); yPos += 6;
+            doc.text(`Tubo 1: ${c.pressaoT1} mBar / ${c.fluxoT1} LPM   |   Tubo 2: ${c.pressaoT2} mBar / ${c.fluxoT2} LPM   |   Tubo 3: ${c.pressaoT3} mBar / ${c.fluxoT3} LPM`, 20, yPos); yPos += 6;
+            doc.text(`Conexoes: T1 ${c.tubo1}  |  T2 ${c.tubo2}  |  T3 ${c.tubo3}   |   Servo: ${c.servo}`, 20, yPos); yPos += 12;
+        });
+    }
+
+    // Rodape
+    doc.setTextColor(140, 140, 140);
+    doc.setFontSize(8);
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.text(`TSEA Energy  —  Relatorio Mensal ${nomeMes}/${anoAtual}  —  Pagina ${p} de ${totalPages}`, 105, 290, { align: 'center' });
+    }
+
+    const filename = `relatorio_mensal_${anoAtual}_${String(mesAtual).padStart(2, '0')}_${usuarioAtual || 'anonimo'}.pdf`;
+    doc.save(filename);
+    console.log('Relatorio mensal gerado:', filename, '| Ciclos:', ciclos.length);
 }
 
 // =============================================
