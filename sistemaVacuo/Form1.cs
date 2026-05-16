@@ -17,7 +17,7 @@ namespace sistemaVacuo
     {
         // --- API via DevTunnel ---
         private static HttpClient httpClient = new HttpClient();
-        private const string API_URL = "https://pj9njgnt-5000.brs.devtunnels.ms/api/leiturasSensores";
+        private const string API_URL = "https://kg6l3t40-5000.brs.devtunnels.ms/api/leiturasSensores";
 
         // --- MYSQL (XAMPP) ---
         private const string CONN_STRING =

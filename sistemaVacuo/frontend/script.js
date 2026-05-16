@@ -1,28 +1,27 @@
 // =============================================
-//  SCRIPT - Sistema de Vacuo
-//  VERSAO ATUALIZADA
+//  SCRIPT - Sistema de Vacuo (VERSÃO INTEGRADA COM API)
+//  CORREÇÃO: Remove simulação local e conecta com a API real
 // =============================================
 
 const API_URL = "http://localhost:5000/api";
 let usuarioAtual = null;
 let timerInterval = null;
 let tempoDecorrido = 0;
-let tempoLimite = 0; // 0 = indeterminado
+let tempoLimite = 0;
 let processoEmAndamento = false;
 let dashboardCarregado = false;
+let cicloAtualId = 1;
 
 // Tubos iniciam DESCONECTADOS (false)
 const mangueiras = { 1: false, 2: false, 3: false };
 const servos = { 1: 155, 2: 155, 3: 155 };
 let dadosAtual = null;
-let cicloAtualId = 1;
 
 // =============================================
 //  INICIALIZACAO
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM carregado');
-    // Login sempre obrigatorio — ignora qualquer sessao salva
     mostrarModalLogin();
     configurarEventosLogin();
     setInterval(atualizarRelogio, 1000);
@@ -115,9 +114,6 @@ function mostrarDashboard() {
         dashboardCarregado = true;
         console.log('Inicializando dashboard');
         inicializarDashboard();
-    } else {
-        // Relogin: apenas atualiza nome, nao reinicia tudo
-        console.log('Relogin detectado, atualizando usuario');
     }
 }
 
@@ -155,10 +151,8 @@ function mostrarDadosIniciais() {
     const timerLimitEl = document.getElementById('timerLimit');
     if (timerLimitEl) timerLimitEl.textContent = '';
 
-    // Inicializar gauges
     atualizarGauges(0, 0, 0, 0, 0);
 
-    // Inicializar pressoes dos tubos
     [1, 2, 3].forEach(n => {
         const p = document.getElementById(`infoPressaoM${n}`);
         if (p) p.textContent = '--';
@@ -171,7 +165,6 @@ function mostrarDadosIniciais() {
         if (f) f.textContent = '-- LPM';
     });
 
-    // Garantir que tubos mostram estado desligado
     [1, 2, 3].forEach(n => {
         const btn = document.getElementById(`btnMangueira${n}`);
         if (btn) {
@@ -275,7 +268,6 @@ function configurarBotoes() {
     const btnRelatorio = document.getElementById('btnRelatorio');
     const btnFechar = document.getElementById('btnFechar');
 
-    // Iniciar abre o modal de timer primeiro
     if (btnIniciar) btnIniciar.addEventListener('click', abrirModalTimer);
     if (btnEmergencia) btnEmergencia.addEventListener('click', emergencia);
     if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioMensal);
@@ -300,18 +292,15 @@ function configurarBotoes() {
         });
     }
 
-    // Botoes do modal de timer
     const btnCancelarTimer = document.getElementById('btnCancelarTimer');
     const btnConfirmarTimer = document.getElementById('btnConfirmarTimer');
 
     if (btnCancelarTimer) btnCancelarTimer.addEventListener('click', fecharModalTimer);
     if (btnConfirmarTimer) btnConfirmarTimer.addEventListener('click', confirmarTimer);
 
-    // Botoes do modal de tempo encerrado
     const btnFecharTempoEncerrado = document.getElementById('btnFecharTempoEncerrado');
     if (btnFecharTempoEncerrado) btnFecharTempoEncerrado.addEventListener('click', fecharModalTempoEncerrado);
 
-    // Botoes do modal de desativar emergencia
     const btnCancelarEmergencia = document.getElementById('btnCancelarEmergencia');
     const btnConfirmarDesativar = document.getElementById('btnConfirmarDesativarEmergencia');
 
@@ -342,18 +331,16 @@ function criarDrum(elId, max, loop) {
     if (!el) return;
 
     const ITEM_H = 36;
-    const VISIBLE = 3; // itens visíveis acima/abaixo do centro
+    const VISIBLE = 3;
     let current = 0;
     let startY = 0;
     let isDragging = false;
     let startOffset = 0;
     let currentOffset = 0;
 
-    // Preenche itens: para loop (min/seg), duplica 3x para scroll infinito suave
-    const count = max + 1; // 0..max
+    const count = max + 1;
     el.innerHTML = '';
 
-    // Padding fantasma no topo
     for (let i = 0; i < VISIBLE; i++) {
         const pad = document.createElement('div');
         pad.className = 'drum-item';
@@ -368,7 +355,6 @@ function criarDrum(elId, max, loop) {
         el.appendChild(item);
     }
 
-    // Padding fantasma no fundo
     for (let i = 0; i < VISIBLE; i++) {
         const pad = document.createElement('div');
         pad.className = 'drum-item';
@@ -392,12 +378,10 @@ function criarDrum(elId, max, loop) {
         }
         el.style.transform = `translateY(${getOffset(current)}px)`;
 
-        // Atualiza visual selected
         el.querySelectorAll('.drum-item').forEach((item, i) => {
             item.classList.toggle('selected', i === current + VISIBLE);
         });
 
-        // Salva valor
         if (elId === 'drumHoras') drumState.horas = current;
         if (elId === 'drumMinutos') drumState.minutos = current;
         if (elId === 'drumSegundos') drumState.segundos = current;
@@ -405,7 +389,6 @@ function criarDrum(elId, max, loop) {
 
     snapTo(0, false);
 
-    // Mouse
     el.parentElement.addEventListener('mousedown', (e) => {
         isDragging = true;
         startY = e.clientY;
@@ -429,7 +412,6 @@ function criarDrum(elId, max, loop) {
         snapTo(current + steps, true);
     });
 
-    // Touch
     el.parentElement.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
         startOffset = getOffset(current);
@@ -448,7 +430,6 @@ function criarDrum(elId, max, loop) {
         snapTo(current + steps, true);
     });
 
-    // Scroll de roda do mouse
     el.parentElement.addEventListener('wheel', (e) => {
         e.preventDefault();
         const steps = e.deltaY > 0 ? 1 : -1;
@@ -589,11 +570,9 @@ function iniciarProcesso() {
         statusEl.style.color = '';
     }
 
-    // Exibir tempo limite configurado
     const timerLimitEl = document.getElementById('timerLimit');
     if (timerLimitEl) timerLimitEl.textContent = '';
 
-    // Mostrar contagem regressiva imediatamente
     const timerElInicial = document.getElementById('timerDisplay');
     if (timerElInicial) {
         const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
@@ -602,7 +581,6 @@ function iniciarProcesso() {
         timerElInicial.textContent = `${lh}:${lm}:${ls}`;
     }
 
-    // Limpar grafico
     if (window.vacuoChart) {
         window.vacuoChart.data.labels = [];
         window.vacuoChart.data.datasets[0].data = [];
@@ -613,7 +591,6 @@ function iniciarProcesso() {
     timerInterval = setInterval(() => {
         tempoDecorrido++;
 
-        // Contagem regressiva
         const restante = Math.max(tempoLimite - tempoDecorrido, 0);
         const h = Math.floor(restante / 3600).toString().padStart(2, '0');
         const m = Math.floor((restante % 3600) / 60).toString().padStart(2, '0');
@@ -621,7 +598,6 @@ function iniciarProcesso() {
         const timerEl = document.getElementById('timerDisplay');
         if (timerEl) timerEl.textContent = `${h}:${m}:${s}`;
 
-        // Verificar se atingiu o limite
         if (tempoDecorrido >= tempoLimite) {
             pararProcesso();
 
@@ -636,14 +612,14 @@ function iniciarProcesso() {
             const timerLimitEl2 = document.getElementById('timerLimit');
             if (timerLimitEl2) timerLimitEl2.textContent = 'TEMPO ENCERRADO';
 
-            // Relatório automático
             gerarRelatorioPDF();
             mostrarModalTempoEncerrado();
         }
     }, 1000);
 
-    if (window.simInterval) clearInterval(window.simInterval);
-    window.simInterval = setInterval(simularDados, 1000);
+    // ⭐ SUBSTITUIR SIMULAÇÃO POR REQUISIÇÃO À API
+    if (window.apiInterval) clearInterval(window.apiInterval);
+    window.apiInterval = setInterval(buscarDadosDaAPI, 1000);
 
     console.log('Processo iniciado. Limite:', tempoLimite > 0 ? tempoLimite + 's' : 'indeterminado');
 }
@@ -651,7 +627,7 @@ function iniciarProcesso() {
 function pararProcesso() {
     processoEmAndamento = false;
     if (timerInterval) clearInterval(timerInterval);
-    if (window.simInterval) clearInterval(window.simInterval);
+    if (window.apiInterval) clearInterval(window.apiInterval);
 
     const btnIniciar = document.getElementById('btnIniciar');
     if (btnIniciar) btnIniciar.disabled = false;
@@ -667,12 +643,10 @@ let modoEmergencia = false;
 
 function emergencia() {
     if (modoEmergencia) {
-        // Ja em emergencia: abre modal para desativar
         abrirModalDesativarEmergencia();
         return;
     }
 
-    // Ativar emergencia
     modoEmergencia = true;
     pararProcesso();
     tempoDecorrido = 0;
@@ -710,21 +684,18 @@ function emergencia() {
 }
 
 function bloquearInterface(bloquear) {
-    // Tubos
     document.querySelectorAll('.mangueira-button').forEach(btn => {
         btn.disabled = bloquear;
         btn.style.opacity = bloquear ? '0.3' : '';
         btn.style.cursor = bloquear ? 'not-allowed' : '';
     });
 
-    // Servos / valvulas
     document.querySelectorAll('.servo-button').forEach(btn => {
         btn.disabled = bloquear;
         btn.style.opacity = bloquear ? '0.3' : '';
         btn.style.cursor = bloquear ? 'not-allowed' : '';
     });
 
-    // Botoes principais (exceto emergencia e relatorio)
     const btnIniciar = document.getElementById('btnIniciar');
     const btnRelatorio = document.getElementById('btnRelatorio');
     if (btnIniciar) {
@@ -736,7 +707,6 @@ function bloquearInterface(bloquear) {
         btnRelatorio.style.opacity = bloquear ? '0.3' : '';
     }
 
-    // Abas
     document.querySelectorAll('.tab-button').forEach(btn => {
         if (bloquear) {
             btn.style.pointerEvents = 'none';
@@ -826,45 +796,58 @@ function atualizarGauges(temp, fluxo1, fluxo2, fluxo3, diferencial) {
 }
 
 // =============================================
-//  DADOS
+//  ⭐ BUSCAR DADOS DA API (NOVO)
 // =============================================
-function simularDados() {
+async function buscarDadosDaAPI() {
     if (!processoEmAndamento) return;
 
-    const pressaoCamara = 100 + Math.random() * 600;
-    const tempOleo = 50 + Math.random() * 40;
+    try {
+        // GET /api/leiturasSensores?limit=1 para pegar a última leitura
+        const response = await fetch(`${API_URL}/leiturasSensores?limit=1`);
 
-    const pressaoM1 = pressaoCamara * 0.6;
-    const pressaoM2 = (pressaoCamara * 0.5) - 0.4;
-    const pressaoM3 = (pressaoCamara * 0.55) + 0.4;
+        if (!response.ok) {
+            console.error('Erro ao buscar dados da API:', response.status);
+            return;
+        }
 
-    const fluxoM1 = (pressaoM1 / 1000) * 5;
-    const fluxoM2 = (pressaoM2 / 1000) * 4.5;
-    const fluxoM3 = (pressaoM3 / 1000) * 4.8;
+        const leituras = await response.json();
 
-    const maiorPressao = Math.max(pressaoM1, pressaoM2, pressaoM3);
-    const menorPressao = Math.min(pressaoM1, pressaoM2, pressaoM3);
-    const diferencialPressao = maiorPressao - menorPressao;
+        // Se houver leituras, pegar a primeira (mais recente)
+        if (leituras && leituras.length > 0) {
+            const leitura = leituras[0];
 
-    dadosAtual = {
-        cicloId: cicloAtualId,
-        estadoMaquina: "Ligado",
-        pressaoCamaraMbar: pressaoCamara,
-        pressaoTubo1Mbar: pressaoM1,
-        fluxoTubo1LPM: fluxoM1,
-        pressaoTubo2Mbar: pressaoM2,
-        fluxoTubo2LPM: fluxoM2,
-        pressaoTubo3Mbar: pressaoM3,
-        fluxoTubo3LPM: fluxoM3,
-        temperaturaOleo: tempOleo,
-        bombaLigada: true,
-        valvulaAberta: true,
-        servoAngulo: servos[1] || 0
-    };
+            // Garantir que sejam números
+            dadosAtual = {
+                cicloId: leitura.cicloId || 1,
+                estadoMaquina: leitura.estadoMaquina || "Ligado",
+                pressaoCamaraMbar: parseFloat(leitura.pressaoCamaraMbar) || 0,
+                pressaoTubo1Mbar: parseFloat(leitura.pressaoTubo1Mbar) || 0,
+                fluxoTubo1LPM: parseFloat(leitura.fluxoTubo1LPM) || 0,
+                pressaoTubo2Mbar: parseFloat(leitura.pressaoTubo2Mbar) || 0,
+                fluxoTubo2LPM: parseFloat(leitura.fluxoTubo2LPM) || 0,
+                pressaoTubo3Mbar: parseFloat(leitura.pressaoTubo3Mbar) || 0,
+                fluxoTubo3LPM: parseFloat(leitura.fluxoTubo3LPM) || 0,
+                temperaturaOleo: parseFloat(leitura.temperaturaOleo) || 0,
+                bombaLigada: leitura.bombaLigada || true,
+                valvulaAberta: leitura.valvulaAberta || true,
+                servoAngulo: leitura.servoAngulo || 0
+            };
 
-    atualizarDados(dadosAtual);
+            atualizarDados(dadosAtual);
+            console.log('✅ Dados obtidos da API:', dadosAtual);
+        } else {
+            console.warn('Nenhuma leitura disponível na API ainda');
+        }
+    } catch (error) {
+        console.error('Erro ao conectar com API:', error.message);
+        // Opcionalmente, fallback para simulação se API falhar
+        // simularDadosFallback();
+    }
 }
 
+// =============================================
+//  ATUALIZAR DADOS (PARA AMBOS OS CASOS)
+// =============================================
 function atualizarDados(dados) {
     const infoPressaoEl = document.getElementById('infoPressao');
     if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2);
@@ -962,7 +945,7 @@ function salvarCicloNoHistorico() {
 }
 
 // =============================================
-//  RELATORIO PDF — CICLO UNICO (automatico ao fim)
+//  RELATORIO PDF — CICLO UNICO
 // =============================================
 async function gerarRelatorioPDF() {
     salvarCicloNoHistorico();
@@ -1032,7 +1015,7 @@ async function gerarRelatorioPDF() {
 }
 
 // =============================================
-//  RELATORIO MENSAL (botao manual)
+//  RELATORIO MENSAL
 // =============================================
 async function gerarRelatorioMensal() {
     const { jsPDF } = window.jspdf;
@@ -1050,7 +1033,6 @@ async function gerarRelatorioMensal() {
 
     const doc = new jsPDF();
 
-    // Cabecalho
     doc.setFillColor(20, 20, 20);
     doc.rect(0, 0, 210, 45, 'F');
     doc.setTextColor(232, 232, 232);
@@ -1074,13 +1056,11 @@ async function gerarRelatorioMensal() {
         doc.text(`Total de ciclos em ${nomeMes}: ${ciclos.length}`, 20, yPos); yPos += 14;
 
         ciclos.forEach((c, i) => {
-            // Nova pagina se necessario
             if (yPos > 255) {
                 doc.addPage();
                 yPos = 20;
             }
 
-            // Separador do ciclo
             doc.setFillColor(235, 235, 235);
             doc.rect(15, yPos - 4, 180, 7, 'F');
             doc.setTextColor(40, 40, 40);
@@ -1099,7 +1079,6 @@ async function gerarRelatorioMensal() {
         });
     }
 
-    // Rodape
     doc.setTextColor(140, 140, 140);
     doc.setFontSize(8);
     const totalPages = doc.internal.getNumberOfPages();
