@@ -1,8 +1,7 @@
 // =============================================
-//  SCRIPT - Sistema de Vacuo
-//  Compatível com XGZP6847D (-100~0 kPa)
-//  API já retorna valores em mBar (float)
-//  Não há conversão necessária no frontend
+//  SCRIPT - Sistema de Vacuo  (TSEA ENERGY)
+//  Sensor XGZP6847D (-150~10 kPa)
+//  API retorna valores em mBar (float)
 // =============================================
 
 const API_URL = "http://localhost:5000/api";
@@ -16,24 +15,60 @@ let dashboardCarregado = false;
 let cicloAtualId = 1;
 let modoEmergencia = false;
 
-// Tubos iniciam DESCONECTADOS (false)
+// Óleo
+let intervaloOleo = null;
+let nivelCheio = false;       // true quando nível atingiu 100%
+let tempCoolingStarted = false; // true quando resfriamento iniciou
+
+let dadosOleo = {
+    pressao: 0,
+    temperatura: 60,
+    nivel: 0,
+    fluxo: 0
+};
+
+// Tubos e servos
 const mangueiras = { 1: false, 2: false, 3: false };
 const servos = { 1: 155, 2: 155, 3: 155 };
 
 let dadosAtual = null;
 
+// Histórico do gráfico de vácuo (para o relatório)
+const historicoVacuo = { labels: [], values: [] };
+
+// Histórico do gráfico de temperatura do óleo (para o relatório)
+const historicoTemp = { labels: [], values: [] };
+
+// Sensor faixas
+const SENSOR_MBAR_MIN = -150;
+const SENSOR_MBAR_MAX = 10;
+
 // =============================================
-//  FAIXA DO SENSOR  (-100 kPa ~ 0 kPa = -1000 ~ 0 mBar)
-//  Usada apenas para limites do gráfico e gauges
+//  STORAGE SEGURO
 // =============================================
-const SENSOR_MBAR_MIN = -1000;
-const SENSOR_MBAR_MAX = 0;
+const memStorage = {};
+
+function storageSet(key, value) {
+    try { localStorage.setItem(key, value); } catch { memStorage[key] = value; }
+}
+
+function storageGet(key) {
+    try { const v = localStorage.getItem(key); if (v !== null) return v; } catch { }
+    return memStorage[key] ?? null;
+}
+
+function storageRemove(key) {
+    try { localStorage.removeItem(key); } catch { }
+    delete memStorage[key];
+}
 
 // =============================================
 //  INICIALIZAÇÃO
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM carregado — sensor XGZP6847D (-100~0 kPa)');
+    console.log('DOM carregado — sensor XGZP6847D');
+    aplicarTema(storageGet('tema') || 'dark');
+    configurarToggleTema();
     mostrarModalLogin();
     configurarEventosLogin();
     setInterval(atualizarRelogio, 1000);
@@ -41,12 +76,37 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =============================================
-//  AUTENTICAÇÃO
+//  TEMA CLARO / ESCURO
+// =============================================
+function aplicarTema(tema) {
+    document.documentElement.setAttribute('data-theme', tema);
+    storageSet('tema', tema);
+    const label = document.getElementById('themeLabel');
+    if (label) label.textContent = tema === 'dark' ? 'ESCURO' : 'CLARO';
+    try {
+        if (window.vacuoChart?.data?.datasets?.[0]) {
+            const cor = tema === 'dark' ? '#c8c8d4' : '#3a3730';
+            window.vacuoChart.data.datasets[0].borderColor = cor;
+            window.vacuoChart.update();
+        }
+    } catch { }
+}
+
+function configurarToggleTema() {
+    const toggle = document.getElementById('themeToggle');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+        const atual = document.documentElement.getAttribute('data-theme') || 'dark';
+        aplicarTema(atual === 'dark' ? 'light' : 'dark');
+    });
+}
+
+// =============================================
+//  AUTENTICAÇÃO — com loading + timeout 10s
 // =============================================
 function configurarEventosLogin() {
     const btnConfirmar = document.getElementById('btnConfirmarId');
     const inputId = document.getElementById('inputId');
-
     if (btnConfirmar) btnConfirmar.addEventListener('click', validarId);
     if (inputId) {
         inputId.addEventListener('keypress', (e) => { if (e.key === 'Enter') validarId(); });
@@ -64,6 +124,29 @@ function ocultarModalLogin() {
     if (modal) modal.classList.add('hidden');
 }
 
+function setLoginLoading(loading) {
+    const btn = document.getElementById('btnConfirmarId');
+    const input = document.getElementById('inputId');
+    if (!btn) return;
+    if (loading) {
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        btn.setAttribute('data-original', btn.textContent);
+        btn.innerHTML = '<span class="btn-spinner"></span>VERIFICANDO...';
+        if (input) input.disabled = true;
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        btn.textContent = btn.getAttribute('data-original') || 'CONFIRMAR';
+        if (input) input.disabled = false;
+    }
+}
+
+const OPERADORES_TESTE = {
+    'OP-001': 'Operador 1',
+    'OP-002': 'Operador 2'
+};
+
 async function validarId() {
     const inputId = document.getElementById('inputId');
     const errorMsg = document.getElementById('errorMsg');
@@ -71,32 +154,59 @@ async function validarId() {
 
     if (!id) { mostrarErro('Digite um ID valido!', errorMsg); return; }
 
-    try {
-        const response = await fetch(`${API_URL}/operadores?identificador=${id}`);
-        const data = await response.json();
+    setLoginLoading(true);
+    errorMsg.classList.remove('show');
 
-        if (response.ok && data && data.id) {
-            usuarioAtual = id;
-            localStorage.setItem('usuarioNome', data.nome);
-            localStorage.setItem('usuarioDbId', data.id);
-            inputId.value = '';
-            mostrarDashboard();
-        } else {
-            mostrarErro('ID nao encontrado!', errorMsg);
-            inputId.value = '';
+    // Timeout de 10 segundos
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+    );
+
+    // 1. Tenta API com timeout
+    let apiOk = false;
+    try {
+        const fetchPromise = fetch(`${API_URL}/operadores?identificador=${id}`);
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (response.ok) {
+            const data = await response.json();
+            const registro = Array.isArray(data) ? data[0] : data;
+            if (registro && registro.id) {
+                usuarioAtual = id;
+                storageSet('usuarioNome', registro.nome || id);
+                storageSet('usuarioDbId', registro.id);
+                inputId.value = '';
+                setLoginLoading(false);
+                mostrarDashboard();
+                apiOk = true;
+            }
         }
-    } catch (error) {
-        console.warn('API offline, validacao local');
-        if (id === 'OP-001' || id === 'OP-002') {
-            usuarioAtual = id;
-            localStorage.setItem('usuarioNome', 'Operador');
-            inputId.value = '';
-            mostrarDashboard();
-        } else {
-            mostrarErro('ID nao encontrado!', errorMsg);
-            inputId.value = '';
+    } catch (err) {
+        if (err.message === 'TIMEOUT') {
+            setLoginLoading(false);
+            mostrarErro('Tempo de resposta excedido. Verifique a conexao.', errorMsg);
+            return;
         }
+        // API offline — continua para fallback
     }
+
+    if (apiOk) return;
+
+    // 2. Fallback: operadores de teste
+    if (OPERADORES_TESTE[id]) {
+        usuarioAtual = id;
+        storageSet('usuarioNome', OPERADORES_TESTE[id]);
+        inputId.value = '';
+        setLoginLoading(false);
+        mostrarDashboard();
+        return;
+    }
+
+    // 3. ID não encontrado
+    setLoginLoading(false);
+    mostrarErro('ID nao encontrado!', errorMsg);
+    inputId.value = '';
+    document.getElementById('inputId')?.focus();
 }
 
 function mostrarErro(msg, elemento) {
@@ -107,9 +217,9 @@ function mostrarErro(msg, elemento) {
 }
 
 function atualizarNomeUsuario() {
-    const nome = localStorage.getItem('usuarioNome') || usuarioAtual;
+    const nome = storageGet('usuarioNome') || usuarioAtual;
     const el = document.getElementById('usuarioLogado');
-    if (el) el.textContent = `${usuarioAtual}  -  ${nome}`;
+    if (el) el.textContent = `${usuarioAtual}  —  ${nome}`;
 }
 
 function mostrarDashboard() {
@@ -117,8 +227,21 @@ function mostrarDashboard() {
     atualizarNomeUsuario();
     if (!dashboardCarregado) {
         dashboardCarregado = true;
-        inicializarDashboard();
+        esperarChartJS(() => inicializarDashboard());
     }
+}
+
+// =============================================
+//  AGUARDA CHART.JS CARREGAR
+// =============================================
+function esperarChartJS(callback) {
+    if (window.Chart) { callback(); return; }
+    let tentativas = 0;
+    const intervalo = setInterval(() => {
+        tentativas++;
+        if (window.Chart) { clearInterval(intervalo); callback(); }
+        else if (tentativas > 50) { clearInterval(intervalo); console.warn('Chart.js nao carregou.'); callback(); }
+    }, 100);
 }
 
 // =============================================
@@ -129,6 +252,7 @@ function inicializarDashboard() {
     configurarMangueiras();
     configurarServos();
     inicializarGrafico();
+    inicializarGraficoOleo();
     configurarBotoes();
     inicializarDrums();
     mostrarDadosIniciais();
@@ -141,76 +265,153 @@ function mostrarDadosIniciais() {
         const el = document.getElementById(id);
         if (el) el.textContent = '--';
     });
-
     const infoFaseEl = document.getElementById('infoFase');
     if (infoFaseEl) infoFaseEl.textContent = 'AGUARDANDO';
-
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) timerEl.textContent = '00:00:00';
-
     const timerLimitEl = document.getElementById('timerLimit');
     if (timerLimitEl) timerLimitEl.textContent = '';
-
     atualizarGauges(0, 0, 0, 0, 0);
-
     [1, 2, 3].forEach(n => {
         const p = document.getElementById(`infoPressaoM${n}`);
         if (p) p.textContent = '--';
-
         const vp = document.getElementById(`valvePressure${n}`);
         const vf = document.getElementById(`valveFlow${n}`);
         if (vp) vp.textContent = '-- mBar';
         if (vf) vf.textContent = '-- LPM';
-
         const btn = document.getElementById(`btnMangueira${n}`);
         if (btn) { btn.classList.remove('conectada'); btn.textContent = `Tubo ${n}`; }
     });
 }
 
 // =============================================
-//  GRÁFICO
-//  Faixa Y: -1000 ~ 0 mBar (sensor -100~0 kPa)
+//  GRÁFICOS
 // =============================================
 function inicializarGrafico() {
-    const canvas = document.getElementById('vacuoChart');
-    if (!canvas) return;
+    try {
+        const canvas = document.getElementById('vacuoChart');
+        if (!canvas || !window.Chart) return;
+        const ctx = canvas.getContext('2d');
+        const tema = document.documentElement.getAttribute('data-theme') || 'dark';
+        const corLinha = tema === 'dark' ? '#c8c8d4' : '#3a3730';
 
-    const ctx = canvas.getContext('2d');
-    window.vacuoChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Pressao (mBar)',
-                data: [],
-                borderColor: '#e8e8e8',
-                borderWidth: 2.5,
-                tension: 0.4,
-                pointRadius: 0,
-                fill: { target: 'origin', above: 'rgba(232,232,232,0.08)' }
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: { duration: 250 },
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    min: SENSOR_MBAR_MIN,   // -1000
-                    max: SENSOR_MBAR_MAX,   //     0
-                    grid: { color: '#222' },
-                    ticks: { color: '#888', font: { size: 10 } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#888', font: { size: 9 }, maxTicksLimit: 8 }
+        window.vacuoChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Pressao (mBar)',
+                    data: [],
+                    borderColor: corLinha,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    backgroundColor: 'rgba(200,200,212,0.06)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        min: SENSOR_MBAR_MIN,
+                        max: SENSOR_MBAR_MAX,
+                        grid: { color: 'rgba(255,255,255,0.04)' },
+                        ticks: { color: '#666', font: { size: 9, family: 'IBM Plex Mono' } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#666', font: { size: 9 }, maxTicksLimit: 6 }
+                    }
                 }
             }
-        }
-    });
+        });
+    } catch (e) {
+        console.warn('Erro ao inicializar grafico vacuo:', e.message);
+        window.vacuoChart = null;
+    }
 }
 
+function inicializarGraficoOleo() {
+    try {
+        const canvas = document.getElementById('oleoChart');
+        if (!canvas || !window.Chart) return;
+        const ctx = canvas.getContext('2d');
+
+        // Gráfico duplo: pressão (eixo y esquerdo) + temperatura (eixo y direito)
+        window.oleoChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Pressao Oleo (Bar)',
+                        data: [],
+                        borderColor: '#bd0202',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        backgroundColor: 'rgba(189,2,2,0.12)',
+                        fill: true,
+                        yAxisID: 'yPressao'
+                    },
+                    {
+                        label: 'Temperatura (C)',
+                        data: [],
+                        borderColor: '#e88a00',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        backgroundColor: 'rgba(232,138,0,0.07)',
+                        fill: false,
+                        yAxisID: 'yTemp'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#888', font: { size: 9, family: 'IBM Plex Mono' }, boxWidth: 12, padding: 10 }
+                    }
+                },
+                scales: {
+                    yPressao: {
+                        type: 'linear',
+                        position: 'left',
+                        min: 0, max: 10,
+                        grid: { color: 'rgba(255,255,255,0.04)' },
+                        ticks: { color: '#bd0202', font: { size: 9 } }
+                    },
+                    yTemp: {
+                        type: 'linear',
+                        position: 'right',
+                        min: 20, max: 65,
+                        grid: { display: false },
+                        ticks: { color: '#e88a00', font: { size: 9 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#666', font: { size: 9 }, maxTicksLimit: 6 }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('Erro ao inicializar grafico oleo:', e.message);
+        window.oleoChart = null;
+    }
+}
+
+// =============================================
+//  ABAS, MANGUEIRAS, SERVOS
+// =============================================
 function configurarAbas() {
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', () => {
@@ -255,45 +456,30 @@ function configurarBotoes() {
     if (btnIniciar) btnIniciar.addEventListener('click', abrirModalTimer);
     if (btnEmergencia) btnEmergencia.addEventListener('click', emergencia);
     if (btnRelatorio) btnRelatorio.addEventListener('click', gerarRelatorioMensal);
-
     if (btnFechar) btnFechar.addEventListener('click', abrirModalFechar);
 
-    const btnCancelarFechar = document.getElementById('btnCancelarFechar');
-    const btnConfirmarFechar = document.getElementById('btnConfirmarFechar');
-    if (btnCancelarFechar) btnCancelarFechar.addEventListener('click', fecharModalFechar);
-    if (btnConfirmarFechar) btnConfirmarFechar.addEventListener('click', () => {
-        if (window.chrome && window.chrome.webview) {
-            window.chrome.webview.postMessage('fechar_app');
-        } else {
-            window.close();
-        }
+    document.getElementById('btnCancelarFechar')?.addEventListener('click', fecharModalFechar);
+    document.getElementById('btnConfirmarFechar')?.addEventListener('click', () => {
+        if (window.chrome?.webview) window.chrome.webview.postMessage('fechar_app');
+        else window.close();
     });
 
-    const btnCancelarTimer = document.getElementById('btnCancelarTimer');
-    const btnConfirmarTimer = document.getElementById('btnConfirmarTimer');
-    if (btnCancelarTimer) btnCancelarTimer.addEventListener('click', fecharModalTimer);
-    if (btnConfirmarTimer) btnConfirmarTimer.addEventListener('click', confirmarTimer);
-
-    const btnFecharTempoEncerrado = document.getElementById('btnFecharTempoEncerrado');
-    if (btnFecharTempoEncerrado) btnFecharTempoEncerrado.addEventListener('click', fecharModalTempoEncerrado);
-
-    const btnCancelarEmergencia = document.getElementById('btnCancelarEmergencia');
-    const btnConfirmarDesativar = document.getElementById('btnConfirmarDesativarEmergencia');
-    if (btnCancelarEmergencia) btnCancelarEmergencia.addEventListener('click', fecharModalDesativarEmergencia);
-    if (btnConfirmarDesativar) btnConfirmarDesativar.addEventListener('click', desativarEmergencia);
+    document.getElementById('btnCancelarTimer')?.addEventListener('click', fecharModalTimer);
+    document.getElementById('btnConfirmarTimer')?.addEventListener('click', confirmarTimer);
+    document.getElementById('btnFecharTempoEncerrado')?.addEventListener('click', fecharModalTempoEncerrado);
+    document.getElementById('btnCancelarEmergencia')?.addEventListener('click', fecharModalDesativarEmergencia);
+    document.getElementById('btnConfirmarDesativarEmergencia')?.addEventListener('click', desativarEmergencia);
 }
 
 // =============================================
-//  MODAIS GENÉRICOS
+//  MODAIS
 // =============================================
-function abrirModalFechar() { const m = document.getElementById('modalFechar'); if (m) m.classList.remove('hidden'); }
-function fecharModalFechar() { const m = document.getElementById('modalFechar'); if (m) m.classList.add('hidden'); }
-
-function mostrarModalTempoEncerrado() { const m = document.getElementById('modalTempoEncerrado'); if (m) m.classList.remove('hidden'); }
-function fecharModalTempoEncerrado() { const m = document.getElementById('modalTempoEncerrado'); if (m) m.classList.add('hidden'); }
-
-function abrirModalDesativarEmergencia() { const m = document.getElementById('modalDesativarEmergencia'); if (m) m.classList.remove('hidden'); }
-function fecharModalDesativarEmergencia() { const m = document.getElementById('modalDesativarEmergencia'); if (m) m.classList.add('hidden'); }
+function abrirModalFechar() { document.getElementById('modalFechar')?.classList.remove('hidden'); }
+function fecharModalFechar() { document.getElementById('modalFechar')?.classList.add('hidden'); }
+function mostrarModalTempoEncerrado() { document.getElementById('modalTempoEncerrado')?.classList.remove('hidden'); }
+function fecharModalTempoEncerrado() { document.getElementById('modalTempoEncerrado')?.classList.add('hidden'); }
+function abrirModalDesativarEmergencia() { document.getElementById('modalDesativarEmergencia')?.classList.remove('hidden'); }
+function fecharModalDesativarEmergencia() { document.getElementById('modalDesativarEmergencia')?.classList.add('hidden'); }
 
 // =============================================
 //  DRUM PICKER
@@ -304,8 +490,7 @@ function criarDrum(elId, max, loop) {
     const el = document.getElementById(elId);
     if (!el) return;
 
-    const ITEM_H = 36;
-    const VISIBLE = 3;
+    const ITEM_H = 36, VISIBLE = 3;
     let current = 0, startY = 0, isDragging = false, startOffset = 0, currentOffset = 0;
     const count = max + 1;
 
@@ -325,14 +510,11 @@ function criarDrum(elId, max, loop) {
     function snapTo(index, animate) {
         if (loop) current = ((index % count) + count) % count;
         else current = Math.max(0, Math.min(max, index));
-
         el.style.transition = animate ? 'transform 0.18s ease' : 'none';
         el.style.transform = `translateY(${getOffset(current)}px)`;
-
         el.querySelectorAll('.drum-item').forEach((item, i) => {
             item.classList.toggle('selected', i === current + VISIBLE);
         });
-
         if (elId === 'drumHoras') drumState.horas = current;
         if (elId === 'drumMinutos') drumState.minutos = current;
         if (elId === 'drumSegundos') drumState.segundos = current;
@@ -354,7 +536,6 @@ function criarDrum(elId, max, loop) {
         isDragging = false;
         snapTo(current + Math.round(-(e.clientY - startY) / ITEM_H), true);
     });
-
     el.parentElement.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY; startOffset = getOffset(current); el.style.transition = 'none';
     }, { passive: true });
@@ -382,36 +563,25 @@ function inicializarDrums() {
 }
 
 function resetarDrums() {
-    if (drumInstances.horas) drumInstances.horas.snapTo(0, false);
-    if (drumInstances.minutos) drumInstances.minutos.snapTo(0, false);
-    if (drumInstances.segundos) drumInstances.segundos.snapTo(0, false);
+    drumInstances.horas?.snapTo(0, false);
+    drumInstances.minutos?.snapTo(0, false);
+    drumInstances.segundos?.snapTo(0, false);
     drumState.horas = drumState.minutos = drumState.segundos = 0;
 }
 
 // =============================================
-//  MODAL DE TIMER
+//  MODAL TIMER
 // =============================================
 function abrirModalTimer() {
     resetarDrums();
-    const modal = document.getElementById('modalTimer');
-    if (modal) modal.classList.remove('hidden');
+    document.getElementById('modalTimer')?.classList.remove('hidden');
 }
-
-function fecharModalTimer() {
-    const modal = document.getElementById('modalTimer');
-    if (modal) modal.classList.add('hidden');
-}
-
+function fecharModalTimer() { document.getElementById('modalTimer')?.classList.add('hidden'); }
 function confirmarTimer() {
     tempoLimite = (drumState.horas * 3600) + (drumState.minutos * 60) + drumState.segundos;
-
     if (tempoLimite <= 0) {
         const hint = document.getElementById('drumHint');
-        if (hint) {
-            hint.textContent = 'Defina um tempo antes de iniciar.';
-            hint.style.display = 'block';
-            setTimeout(() => { hint.style.display = 'none'; }, 3000);
-        }
+        if (hint) { hint.textContent = 'Defina um tempo antes de iniciar.'; hint.style.display = 'block'; setTimeout(() => { hint.style.display = 'none'; }, 3000); }
         return;
     }
     fecharModalTimer();
@@ -436,6 +606,9 @@ function validarBotaoIniciar() {
     btnIniciar.disabled = !(umConectado && umaAberta);
 }
 
+// =============================================
+//  VÁLVULAS — visual com cor dinâmica
+// =============================================
 function atualizarValvulaVisual(num, angulo) {
     const angleEl = document.getElementById(`valveAngle${num}`);
     const angleTxtEl = document.getElementById(`valveAngleTxt${num}`);
@@ -444,20 +617,61 @@ function atualizarValvulaVisual(num, angulo) {
     const flowEl = document.getElementById(`valveFlow${num}`);
     const statusEl = document.getElementById(`valveStatus${num}`);
 
+    const isAberta = angulo <= 100;
+    const status = isAberta ? 'ABERTA' : 'FECHADA';
+
     if (angleEl) angleEl.textContent = angulo + '\u00B0';
     if (angleTxtEl) angleTxtEl.textContent = angulo + '\u00B0';
     if (indicatorEl) indicatorEl.style.transform = `rotate(${angulo}deg)`;
 
-    // Pressão/fluxo mostrados apenas durante processo, via dados reais da API
     if (!processoEmAndamento) {
         if (pressureEl) pressureEl.textContent = '-- mBar';
         if (flowEl) flowEl.textContent = '-- LPM';
     }
 
-    const status = angulo > 100 ? 'FECHADA' : 'ABERTA';
     if (statusEl) {
         statusEl.textContent = status;
-        statusEl.className = 'valve-status ' + (status === 'ABERTA' ? 'on' : 'off');
+        statusEl.className = 'valve-status ' + (isAberta ? 'on' : 'off');
+    }
+
+    // CORREÇÃO: Atualiza cor do SVG da válvula conforme estado
+    // Usa um seletor mais específico para encontrar o SVG correto
+    const panel = document.getElementById(`btnServo${num}`)?.closest('.valve-panel');
+    if (panel) {
+        // Busca por qualquer elemento SVG dentro do .valve-visual
+        const svgContainer = panel.querySelector('.valve-visual');
+        if (svgContainer) {
+            const svg = svgContainer.querySelector('svg');
+            if (svg) {
+                const valveColor = isAberta ? 'var(--valve-open)' : 'var(--valve-closed)';
+
+                // Atualiza todos os elementos que devem mudar de cor
+                const rects = svg.querySelectorAll('rect');
+                const lines = svg.querySelectorAll('line');
+                const circles = svg.querySelectorAll('circle');
+                const texts = svg.querySelectorAll('text');
+
+                rects.forEach(rect => {
+                    if (rect.getAttribute('stroke') !== 'none') {
+                        rect.style.stroke = valveColor;
+                    }
+                });
+
+                lines.forEach(line => {
+                    line.style.stroke = valveColor;
+                });
+
+                circles.forEach(circle => {
+                    if (circle.getAttribute('stroke') !== 'none') {
+                        circle.style.stroke = valveColor;
+                    }
+                });
+
+                texts.forEach(text => {
+                    text.style.fill = valveColor;
+                });
+            }
+        }
     }
 
     validarBotaoIniciar();
@@ -467,28 +681,27 @@ function atualizarValvulaVisual(num, angulo) {
 //  PROCESSO E TIMER
 // =============================================
 function iniciarProcesso() {
-    if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) {
-        alert('Conecte pelo menos 1 tubo para iniciar!');
-        return;
-    }
-    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) {
-        alert('Abra pelo menos 1 valvula para iniciar!');
-        return;
-    }
+    if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) { alert('Conecte pelo menos 1 tubo para iniciar!'); return; }
+    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) { alert('Abra pelo menos 1 valvula para iniciar!'); return; }
 
     processoEmAndamento = true;
     tempoDecorrido = 0;
+    nivelCheio = false;
+    tempCoolingStarted = false;
 
-    const btnIniciar = document.getElementById('btnIniciar');
-    if (btnIniciar) btnIniciar.disabled = true;
+    dadosOleo = { pressao: 0, temperatura: 60, nivel: 0, fluxo: 0 };
+    historicoVacuo.labels = [];
+    historicoVacuo.values = [];
+    historicoTemp.labels = [];
+    historicoTemp.values = [];
+
+    document.getElementById('btnIniciar').disabled = true;
 
     const statusEl = document.getElementById('status-estado');
     if (statusEl) { statusEl.textContent = 'PROCESSANDO'; statusEl.style.color = ''; }
 
-    const timerLimitEl = document.getElementById('timerLimit');
-    if (timerLimitEl) timerLimitEl.textContent = '';
+    document.getElementById('timerLimit').textContent = '';
 
-    // Exibe contagem regressiva inicial
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) {
         const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
@@ -497,7 +710,6 @@ function iniciarProcesso() {
         timerEl.textContent = `${lh}:${lm}:${ls}`;
     }
 
-    // Limpa gráfico
     if (window.vacuoChart) {
         window.vacuoChart.data.labels = [];
         window.vacuoChart.data.datasets[0].data = [];
@@ -507,26 +719,21 @@ function iniciarProcesso() {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         tempoDecorrido++;
+
         const restante = Math.max(tempoLimite - tempoDecorrido, 0);
         const h = Math.floor(restante / 3600).toString().padStart(2, '0');
         const m = Math.floor((restante % 3600) / 60).toString().padStart(2, '0');
         const s = (restante % 60).toString().padStart(2, '0');
-
         const tEl = document.getElementById('timerDisplay');
         if (tEl) tEl.textContent = `${h}:${m}:${s}`;
 
         if (tempoDecorrido >= tempoLimite) {
             pararProcesso();
-            const tEl2 = document.getElementById('timerDisplay');
-            if (tEl2) tEl2.textContent = '00:00:00';
-
+            document.getElementById('timerDisplay').textContent = '00:00:00';
             const sEl2 = document.getElementById('status-estado');
-            if (sEl2) { sEl2.textContent = 'CONCLUIDO'; sEl2.style.color = '#6a9'; }
-
-            const lEl2 = document.getElementById('timerLimit');
-            if (lEl2) lEl2.textContent = 'TEMPO ENCERRADO';
-
-            gerarRelatorioPDF();
+            if (sEl2) { sEl2.textContent = 'CONCLUIDO'; sEl2.style.color = 'var(--green)'; }
+            document.getElementById('timerLimit').textContent = 'TEMPO ENCERRADO';
+            gerarRelatorioPDF(false);
             mostrarModalTempoEncerrado();
         }
     }, 1000);
@@ -534,6 +741,7 @@ function iniciarProcesso() {
     if (window.apiInterval) clearInterval(window.apiInterval);
     window.apiInterval = setInterval(buscarDadosDaAPI, 1000);
 
+    iniciarSimulacaoOleo();
     console.log('Processo iniciado. Limite:', tempoLimite + 's');
 }
 
@@ -541,12 +749,12 @@ function pararProcesso() {
     processoEmAndamento = false;
     if (timerInterval) clearInterval(timerInterval);
     if (window.apiInterval) clearInterval(window.apiInterval);
-
-    const btnIniciar = document.getElementById('btnIniciar');
-    if (btnIniciar) btnIniciar.disabled = false;
-
+    pararSimulacaoOleo();
+    document.getElementById('btnIniciar').disabled = false;
     const statusEl = document.getElementById('status-estado');
     if (statusEl) { statusEl.textContent = 'OPERACIONAL'; statusEl.style.color = ''; }
+    const status = document.getElementById('oleoEstado');
+    if (status) status.textContent = 'CONCLUIDO';
 }
 
 // =============================================
@@ -556,17 +764,18 @@ function emergencia() {
     if (modoEmergencia) { abrirModalDesativarEmergencia(); return; }
 
     modoEmergencia = true;
+    const snaphotDados = dadosAtual ? { ...dadosAtual } : null;
+
     pararProcesso();
+    pararSimulacaoOleo();
+    gerarRelatorioPDF(true, snaphotDados);
+
     tempoDecorrido = tempoLimite = 0;
-
-    const timerEl = document.getElementById('timerDisplay');
-    if (timerEl) timerEl.textContent = '00:00:00';
-
-    const timerLimitEl = document.getElementById('timerLimit');
-    if (timerLimitEl) timerLimitEl.textContent = '';
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerLimit').textContent = '';
 
     const statusEl = document.getElementById('status-estado');
-    if (statusEl) { statusEl.textContent = 'EMERGENCIA'; statusEl.style.color = '#ff6b6b'; }
+    if (statusEl) { statusEl.textContent = 'EMERGENCIA'; statusEl.style.color = 'var(--accent)'; }
 
     servos[1] = servos[2] = servos[3] = 155;
     [1, 2, 3].forEach(n => atualizarValvulaVisual(n, 155));
@@ -578,44 +787,31 @@ function emergencia() {
         btnEmergencia.textContent = 'DESATIVAR EMERGENCIA';
         btnEmergencia.classList.add('btn-emergency-ativa');
     }
-
     console.log('EMERGENCIA ATIVADA');
 }
 
 function bloquearInterface(bloquear) {
     const opacity = bloquear ? '0.3' : '';
     const cursor = bloquear ? 'not-allowed' : '';
-
     document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
-        btn.disabled = bloquear;
-        btn.style.opacity = opacity;
-        btn.style.cursor = cursor;
+        btn.disabled = bloquear; btn.style.opacity = opacity; btn.style.cursor = cursor;
     });
-
     ['btnIniciar', 'btnRelatorio'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.disabled = bloquear; el.style.opacity = opacity; }
     });
-
     document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.style.pointerEvents = bloquear ? 'none' : '';
-        btn.style.opacity = opacity;
+        btn.style.pointerEvents = bloquear ? 'none' : ''; btn.style.opacity = opacity;
     });
 }
 
 function desativarEmergencia() {
     modoEmergencia = false;
     fecharModalDesativarEmergencia();
-
     const statusEl = document.getElementById('status-estado');
     if (statusEl) { statusEl.textContent = 'OPERACIONAL'; statusEl.style.color = ''; }
-
     const btnEmergencia = document.getElementById('btnEmergencia');
-    if (btnEmergencia) {
-        btnEmergencia.textContent = 'EMERGENCIA';
-        btnEmergencia.classList.remove('btn-emergency-ativa');
-    }
-
+    if (btnEmergencia) { btnEmergencia.textContent = 'EMERGENCIA'; btnEmergencia.classList.remove('btn-emergency-ativa'); }
     bloquearInterface(false);
     validarBotaoIniciar();
     console.log('EMERGENCIA DESATIVADA');
@@ -623,62 +819,33 @@ function desativarEmergencia() {
 
 // =============================================
 //  GAUGES
-//  gauge1 = pressão câmara  (mBar, -1000~0)
-//  gauge2 = temperatura     (°C,   0~100)
-//  gauge3/4/5 = fluxo 1/2/3 (LPM,  0~20)
-//  gauge6 = diferencial     (mBar, 0~5)
 // =============================================
 function atualizarGauges(temp, fluxo1, fluxo2, fluxo3, diferencial) {
-    const percentTemp = Math.min((temp / 100) * 100, 100);
-    const g2 = document.getElementById('gaugeBar2');
-    const v2 = document.getElementById('gaugeValue2');
-    if (g2) g2.style.height = percentTemp + '%';
-    if (v2) v2.textContent = temp.toFixed(1) + ' C';
-
-    const percentF1 = Math.min((fluxo1 / 20) * 100, 100);
-    const g3 = document.getElementById('gaugeBar3');
-    const v3 = document.getElementById('gaugeValue3');
-    if (g3) g3.style.height = percentF1 + '%';
-    if (v3) v3.textContent = fluxo1.toFixed(1) + ' LPM';
-
-    const percentF2 = Math.min((fluxo2 / 20) * 100, 100);
-    const g4 = document.getElementById('gaugeBar4');
-    const v4 = document.getElementById('gaugeValue4');
-    if (g4) g4.style.height = percentF2 + '%';
-    if (v4) v4.textContent = fluxo2.toFixed(1) + ' LPM';
-
-    const percentF3 = Math.min((fluxo3 / 20) * 100, 100);
-    const g5 = document.getElementById('gaugeBar5');
-    const v5 = document.getElementById('gaugeValue5');
-    if (g5) g5.style.height = percentF3 + '%';
-    if (v5) v5.textContent = fluxo3.toFixed(1) + ' LPM';
-
-    const percentDif = Math.min((Math.abs(diferencial) / 5) * 100, 100);
-    const g6 = document.getElementById('gaugeBar6');
-    const v6 = document.getElementById('gaugeValue6');
-    if (g6) g6.style.height = percentDif + '%';
-    if (v6) v6.textContent = diferencial.toFixed(2) + ' mBar';
+    const atualizarGauge = (barId, valId, pct, texto) => {
+        const bar = document.getElementById(barId);
+        const val = document.getElementById(valId);
+        if (bar) bar.style.height = Math.min(pct, 100) + '%';
+        if (val) val.textContent = texto;
+    };
+    atualizarGauge('gaugeBar2', 'gaugeValue2', (temp / 100) * 100, temp.toFixed(1) + ' C');
+    atualizarGauge('gaugeBar3', 'gaugeValue3', (fluxo1 / 20) * 100, fluxo1.toFixed(1) + ' LPM');
+    atualizarGauge('gaugeBar4', 'gaugeValue4', (fluxo2 / 20) * 100, fluxo2.toFixed(1) + ' LPM');
+    atualizarGauge('gaugeBar5', 'gaugeValue5', (fluxo3 / 20) * 100, fluxo3.toFixed(1) + ' LPM');
+    atualizarGauge('gaugeBar6', 'gaugeValue6', (Math.abs(diferencial) / 5) * 100, diferencial.toFixed(2) + ' mBar');
 }
 
 // =============================================
-//  BUSCAR DADOS DA API
-//  A API já retorna os valores em mBar (float).
-//  Nenhuma conversão é necessária aqui.
+//  API
 // =============================================
 async function buscarDadosDaAPI() {
     if (!processoEmAndamento) return;
-
     try {
         const response = await fetch(`${API_URL}/leiturasSensores?limit=1`);
-        if (!response.ok) { console.error('Erro API:', response.status); return; }
-
+        if (!response.ok) return;
         const leituras = await response.json();
-        if (!leituras || leituras.length === 0) { console.warn('Nenhuma leitura disponível'); return; }
+        if (!leituras || leituras.length === 0) return;
 
         const leitura = leituras[0];
-
-        // Campos pressaoCamaraMbar, pressaoTuboNMbar e fluxoTuboNLPM
-        // já chegam em mBar e LPM diretamente do banco de dados.
         dadosAtual = {
             cicloId: leitura.cicloId || 1,
             estadoMaquina: leitura.estadoMaquina || 'Ligado',
@@ -694,69 +861,55 @@ async function buscarDadosDaAPI() {
             valvulaAberta: leitura.valvulaAberta ?? true,
             servoAngulo: leitura.servoAngulo || 0
         };
-
         atualizarDados(dadosAtual);
-
     } catch (error) {
-        console.error('Erro ao conectar com API:', error.message);
+        console.error('Erro API:', error.message);
     }
 }
 
 // =============================================
-//  ATUALIZAR DASHBOARD COM DADOS REAIS
+//  ATUALIZAR DASHBOARD
 // =============================================
 function atualizarDados(dados) {
-    // Pressão câmara
-    const infoPressaoEl = document.getElementById('infoPressao');
-    if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2);
+    if (!processoEmAndamento) return;
 
+    const infoPressaoEl = document.getElementById('infoPressao');
     const pressaoValueEl = document.getElementById('pressaoValue');
+    if (infoPressaoEl) infoPressaoEl.textContent = dados.pressaoCamaraMbar.toFixed(2);
     if (pressaoValueEl) pressaoValueEl.textContent = dados.pressaoCamaraMbar.toFixed(2) + ' mBar';
 
-    // Temperatura
     const infoTempEl = document.getElementById('infoTemp');
     if (infoTempEl) infoTempEl.textContent = dados.temperaturaOleo.toFixed(1);
 
-    // Pressões por tubo
     [1, 2, 3].forEach(n => {
         const el = document.getElementById(`infoPressaoM${n}`);
         if (el) el.textContent = dados[`pressaoTubo${n}Mbar`].toFixed(2);
     });
 
-    // Fase baseada na pressão da câmara (sensor -100~0 kPa = -1000~0 mBar)
-    // -1000 ~ -600 mBar: vácuo alto (sucção intensa)
-    // -600  ~ -200 mBar: vácuo estável
-    // -200  ~    0 mBar: pressão baixa
     const p = dados.pressaoCamaraMbar;
     const fase = p < -600 ? 'SUCCAO' : p <= -200 ? 'ESTAVEL' : 'PRESSAO BAIXA';
     const infoFaseEl = document.getElementById('infoFase');
     if (infoFaseEl) infoFaseEl.textContent = fase;
 
-    // Gráfico
     if (window.vacuoChart) {
         const agora = new Date().toLocaleTimeString();
         window.vacuoChart.data.labels.push(agora);
         window.vacuoChart.data.datasets[0].data.push(dados.pressaoCamaraMbar);
-        if (window.vacuoChart.data.labels.length > 30) {
+        if (window.vacuoChart.data.labels.length > 60) {
             window.vacuoChart.data.labels.shift();
             window.vacuoChart.data.datasets[0].data.shift();
         }
         window.vacuoChart.update();
+        historicoVacuo.labels.push(agora);
+        historicoVacuo.values.push(dados.pressaoCamaraMbar);
     }
 
-    // Diferencial entre tubos
     const pressoes = [dados.pressaoTubo1Mbar, dados.pressaoTubo2Mbar, dados.pressaoTubo3Mbar];
     const diferencial = Math.max(...pressoes) - Math.min(...pressoes);
+    atualizarGauges(dados.temperaturaOleo, dados.fluxoTubo1LPM, dados.fluxoTubo2LPM, dados.fluxoTubo3LPM, diferencial);
 
-    atualizarGauges(
-        dados.temperaturaOleo,
-        dados.fluxoTubo1LPM,
-        dados.fluxoTubo2LPM,
-        dados.fluxoTubo3LPM,
-        diferencial
-    );
+    atualizarSistemaOleo();
 
-    // Painel de válvulas
     [1, 2, 3].forEach(n => {
         const pEl = document.getElementById(`valvePressure${n}`);
         const fEl = document.getElementById(`valveFlow${n}`);
@@ -766,14 +919,147 @@ function atualizarDados(dados) {
 }
 
 // =============================================
-//  HISTÓRICO DE CICLOS (localStorage)
+//  SIMULADOR ÓLEO
+//  Lógica:
+//  - Nível sobe de 0 → 100% ao longo de tempoLimite * 0.60
+//  - Temperatura fica estática em 60°C enquanto nível < 100%
+//  - Quando nível atinge 100%: começa resfriamento
+//  - Resfriamento: 60°C → 25°C ao longo de tempoLimite * (0.70 - fracaoNivelCheio)
+//    ou seja, chega em 25°C quando tempoDecorrido = tempoLimite * 0.70
 // =============================================
-function salvarCicloNoHistorico() {
+function iniciarSimulacaoOleo() {
+    if (intervaloOleo) clearInterval(intervaloOleo);
+
+    if (window.oleoChart) {
+        window.oleoChart.data.labels = [];
+        window.oleoChart.data.datasets[0].data = [];
+        window.oleoChart.data.datasets[1].data = [];
+        window.oleoChart.update();
+    }
+
+    dadosOleo.temperatura = 60;
+    dadosOleo.nivel = 0;
+    dadosOleo.pressao = 0;
+    nivelCheio = false;
+    tempCoolingStarted = false;
+
+    // Momento (em segundos) em que o nível atingirá 100%
+    // O nível sobe linearmente: chega em 100% em tempoLimite * 0.60
+    const tempoNivelCheio = tempoLimite * 0.60;
+    // O resfriamento deve completar em tempoLimite * 0.70
+    // Duração do resfriamento = tempoLimite * 0.70 - tempoNivelCheio = tempoLimite * 0.10
+    const duracaoResfriamento = tempoLimite * 0.10;
+
+    intervaloOleo = setInterval(() => {
+        if (!processoEmAndamento) return;
+
+        // Pressão sobe gradualmente
+        dadosOleo.pressao = Math.min(dadosOleo.pressao + Math.random() * 0.25 + 0.05, 10);
+
+        const pctTempo = tempoDecorrido / tempoLimite;
+
+        // --- NÍVEL ---
+        if (!nivelCheio) {
+            // Sobe linearmente até 100% em 60% do tempo
+            const incremento = (100 / tempoNivelCheio) + (Math.random() * 0.3 - 0.15);
+            dadosOleo.nivel = Math.min(dadosOleo.nivel + incremento, 100);
+            if (dadosOleo.nivel >= 100) {
+                dadosOleo.nivel = 100;
+                nivelCheio = true;
+                tempCoolingStarted = true;
+                console.log('Oleo: nivel 100% atingido. Iniciando resfriamento.');
+            }
+        } else {
+            dadosOleo.nivel = 100;
+        }
+
+        // --- TEMPERATURA ---
+        if (!tempCoolingStarted) {
+            // Ainda enchendo: temperatura estática em 60°C com pequena variação
+            dadosOleo.temperatura = 60 + (Math.random() * 0.4 - 0.2);
+        } else {
+            // Resfriando: de 60°C → 25°C linearmente na duração definida
+            // Tempo decorrido desde que o nível ficou cheio
+            const tempoResfriando = tempoDecorrido - tempoNivelCheio;
+            if (tempoResfriando <= 0) {
+                dadosOleo.temperatura = 60;
+            } else if (tempoResfriando >= duracaoResfriamento) {
+                dadosOleo.temperatura = 25;
+            } else {
+                const progresso = tempoResfriando / duracaoResfriamento;
+                dadosOleo.temperatura = 60 - (60 - 25) * progresso + (Math.random() * 0.4 - 0.2);
+                dadosOleo.temperatura = Math.max(25, Math.min(60, dadosOleo.temperatura));
+            }
+        }
+
+        dadosOleo.fluxo = Math.random() * 8 + 14;
+
+        atualizarSistemaOleo();
+    }, 1000);
+}
+
+function pararSimulacaoOleo() {
+    if (intervaloOleo) { clearInterval(intervaloOleo); intervaloOleo = null; }
+}
+
+// =============================================
+//  ATUALIZAR UI ÓLEO
+// =============================================
+function atualizarSistemaOleo() {
+    if (!processoEmAndamento) return;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+    set('oleoPressao', dadosOleo.pressao.toFixed(1));
+    set('oleoNivel', dadosOleo.nivel.toFixed(1));
+    set('oleoTemp', dadosOleo.temperatura.toFixed(1));
+    set('oleoEstado', tempoDecorrido >= tempoLimite ? 'CONCLUIDO' : 'OPERANDO');
+
+    const oilFill = document.getElementById('oilFill');
+    const oilPercent = document.getElementById('oilPercent');
+    if (oilFill) oilFill.style.height = dadosOleo.nivel + '%';
+    if (oilPercent) oilPercent.textContent = dadosOleo.nivel.toFixed(0) + '%';
+
+    // Cor do tanque muda conforme temperatura
+    const tempRatio = Math.max(0, Math.min(1, (dadosOleo.temperatura - 25) / (60 - 25)));
+    const r = Math.round(107 + (189 - 107) * tempRatio);
+    const g = Math.round(2 + (2 - 2) * tempRatio);
+    const b = Math.round(2 + (2 - 2) * tempRatio);
+    if (oilFill) {
+        const topColor = `rgb(${Math.min(255, r + 30)},${g},${b})`;
+        const botColor = `rgb(${Math.max(60, r - 30)},${g},${b})`;
+        oilFill.style.background = `linear-gradient(to top, ${botColor}, ${topColor})`;
+    }
+
+    const filtro = document.getElementById('oleoFiltro');
+    if (filtro) filtro.textContent = dadosOleo.nivel < 30 ? 'CRITICO' : dadosOleo.nivel < 60 ? 'ATENCAO' : 'NORMAL';
+
+    // Registra histórico de temperatura para o PDF
+    const hora = new Date().toLocaleTimeString();
+    historicoTemp.labels.push(hora);
+    historicoTemp.values.push(dadosOleo.temperatura);
+
+    if (window.oleoChart) {
+        window.oleoChart.data.labels.push(hora);
+        window.oleoChart.data.datasets[0].data.push(dadosOleo.pressao);
+        window.oleoChart.data.datasets[1].data.push(dadosOleo.temperatura);
+        if (window.oleoChart.data.labels.length > 60) {
+            window.oleoChart.data.labels.shift();
+            window.oleoChart.data.datasets[0].data.shift();
+            window.oleoChart.data.datasets[1].data.shift();
+        }
+        window.oleoChart.update();
+    }
+}
+
+// =============================================
+//  HISTÓRICO (storage seguro)
+// =============================================
+function salvarCicloNoHistorico(emergencia = false) {
     const agora = new Date();
     const chave = `ciclos_vacuo_${agora.getFullYear()}_${String(agora.getMonth() + 1).padStart(2, '0')}`;
-
     let ciclos = [];
-    try { ciclos = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) { /* noop */ }
+    try { ciclos = JSON.parse(storageGet(chave) || '[]'); } catch { }
 
     const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
     const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
@@ -781,6 +1067,7 @@ function salvarCicloNoHistorico() {
 
     ciclos.push({
         id: cicloAtualId,
+        emergencia,
         operador: usuarioAtual || 'Nao identificado',
         dataHora: agora.toLocaleString('pt-BR'),
         tempoOperacao: `${lh}:${lm}:${ls}`,
@@ -791,39 +1078,133 @@ function salvarCicloNoHistorico() {
         fluxoT2: dadosAtual ? dadosAtual.fluxoTubo2LPM.toFixed(1) : '--',
         pressaoT3: dadosAtual ? dadosAtual.pressaoTubo3Mbar.toFixed(2) : '--',
         fluxoT3: dadosAtual ? dadosAtual.fluxoTubo3LPM.toFixed(1) : '--',
-        temperatura: dadosAtual ? dadosAtual.temperaturaOleo.toFixed(1) : '--',
+        temperatura: dadosAtual ? dadosAtual.temperaturaOleo.toFixed(1) : dadosOleo.temperatura.toFixed(1),
         tubo1: mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO',
         tubo2: mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO',
         tubo3: mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO',
         servo: dadosAtual ? dadosAtual.servoAngulo + ' graus' : '--',
+        graficoPressaoLabels: [...historicoVacuo.labels],
+        graficoPressaoValues: [...historicoVacuo.values],
+        graficoTempLabels: [...historicoTemp.labels],
+        graficoTempValues: [...historicoTemp.values],
+        graficoOleoLabels: window.oleoChart ? [...window.oleoChart.data.labels] : [],
+        graficoOleoValues: window.oleoChart ? [...window.oleoChart.data.datasets[0].data] : [],
     });
 
-    localStorage.setItem(chave, JSON.stringify(ciclos));
+    storageSet(chave, JSON.stringify(ciclos));
     cicloAtualId++;
     console.log('Ciclo salvo. Total no mes:', ciclos.length);
 }
 
 // =============================================
-//  RELATÓRIO PDF - CICLO
+//  HELPER: desenhar mini-gráfico no PDF
 // =============================================
-async function gerarRelatorioPDF() {
-    salvarCicloNoHistorico();
+function desenharGraficoPDF(doc, x, y, w, h, labels, values, yMin, yMax, titulo, corLinha) {
+    corLinha = corLinha || [50, 80, 180];
+    doc.setFillColor(248, 248, 248);
+    doc.rect(x, y, w, h, 'F');
+    doc.setDrawColor(210, 210, 210);
+    doc.rect(x, y, w, h);
+
+    doc.setFontSize(7);
+    doc.setTextColor(90, 90, 90);
+    doc.text(titulo, x + 2, y + 5);
+
+    if (!values || values.length < 2) {
+        doc.setFontSize(7);
+        doc.setTextColor(150);
+        doc.text('Sem dados registrados', x + w / 2, y + h / 2, { align: 'center' });
+        return;
+    }
+
+    const padL = 8, padR = 4, padT = 9, padB = 9;
+    const gW = w - padL - padR;
+    const gH = h - padT - padB;
+    const range = yMax - yMin || 1;
+
+    doc.setDrawColor(225, 225, 225);
+    doc.setLineWidth(0.15);
+    for (let i = 0; i <= 3; i++) {
+        const gy = y + padT + (i / 3) * gH;
+        doc.line(x + padL, gy, x + padL + gW, gy);
+        const val = yMax - (i / 3) * range;
+        doc.setFontSize(5);
+        doc.setTextColor(150);
+        doc.text(val.toFixed(0), x + padL - 1, gy + 1, { align: 'right' });
+    }
+
+    doc.setDrawColor(...corLinha);
+    doc.setLineWidth(0.5);
+    const pts = values.map((v, i) => ({
+        px: x + padL + (i / (values.length - 1)) * gW,
+        py: y + padT + gH - ((Math.min(Math.max(v, yMin), yMax) - yMin) / range) * gH
+    }));
+    for (let i = 1; i < pts.length; i++) {
+        doc.line(pts[i - 1].px, pts[i - 1].py, pts[i].px, pts[i].py);
+    }
+
+    doc.setFontSize(5);
+    doc.setTextColor(130);
+    const idxs = [0, Math.floor((values.length - 1) / 2), values.length - 1];
+    idxs.forEach(idx => {
+        if (labels[idx]) {
+            const px = x + padL + (idx / (values.length - 1)) * gW;
+            doc.text(labels[idx], px, y + padT + gH + 5, { align: 'center' });
+        }
+    });
+}
+
+// =============================================
+//  RELATÓRIO PDF
+// =============================================
+async function gerarRelatorioPDF(isEmergencia = false, snapshotDados = null) {
+    if (!window.jspdf) { console.warn('jsPDF nao carregou — PDF ignorado.'); return; }
+    salvarCicloNoHistorico(isEmergencia);
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFillColor(20, 20, 20);
-    doc.rect(0, 0, 210, 40, 'F');
+    const corHeader = isEmergencia ? [160, 10, 10] : [18, 18, 20];
+    doc.setFillColor(...corHeader);
+    doc.rect(0, 0, 210, 44, 'F');
     doc.setTextColor(232, 232, 232);
-    doc.setFontSize(20);
-    doc.text('RELATORIO - SISTEMA DE VACUO', 105, 15, { align: 'center' });
+    doc.setFontSize(isEmergencia ? 16 : 17);
+
+    if (isEmergencia) {
+        doc.setFont(undefined, 'bold');
+        doc.text('*** RELATORIO DE EMERGENCIA ***', 105, 13, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+        doc.text('SISTEMA DE VACUO - TSEA ENERGY', 105, 22, { align: 'center' });
+    } else {
+        doc.text('RELATORIO - SISTEMA DE VACUO', 105, 14, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(170, 170, 170);
+        doc.text('TSEA Energy', 105, 24, { align: 'center' });
+    }
+
     doc.setFontSize(10);
     doc.setTextColor(170, 170, 170);
-    doc.text('TSEA Energy', 105, 25, { align: 'center' });
-    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 105, 31, { align: 'center' });
+    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 105, isEmergencia ? 30 : 31, { align: 'center' });
+    if (isEmergencia) {
+        doc.setTextColor(255, 180, 180);
+        doc.text('PROCESSO INTERROMPIDO POR EMERGENCIA', 105, 38, { align: 'center' });
+    }
 
-    let y = 50;
+    let y = 54;
     doc.setTextColor(0, 0, 0);
+
+    if (isEmergencia) {
+        doc.setFillColor(255, 228, 228);
+        doc.rect(15, y - 3, 180, 9, 'F');
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(150, 0, 0);
+        doc.setFontSize(10);
+        doc.text('EMERGENCIA ATIVADA — CICLO INTERROMPIDO', 105, y + 3, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(0, 0, 0);
+        y += 14;
+    }
+
     doc.setFontSize(12);
     doc.text('DADOS DO CICLO', 20, y); y += 10;
     doc.setFontSize(10);
@@ -831,59 +1212,87 @@ async function gerarRelatorioPDF() {
     const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
     const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
     const ls = (tempoLimite % 60).toString().padStart(2, '0');
+    const dadosRef = snapshotDados || dadosAtual;
 
-    doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, y); y += 8;
-    doc.text(`Ciclo ID: ${cicloAtualId}`, 20, y); y += 8;
-    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 20, y); y += 8;
-    doc.text(`Tempo de Operacao: ${lh}:${lm}:${ls}`, 20, y); y += 8;
-
+    doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, y); y += 7;
+    doc.text(`Ciclo ID: ${cicloAtualId - 1}`, 20, y); y += 7;
+    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 20, y); y += 7;
+    doc.text(`Tempo de Operacao: ${lh}:${lm}:${ls}`, 20, y); y += 7;
     const statusEl = document.getElementById('status-estado');
-    doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, y); y += 15;
+    doc.text(`Estado: ${statusEl ? statusEl.textContent : '--'}`, 20, y); y += 7;
+
+    if (isEmergencia) {
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(150, 0, 0);
+        doc.text('Motivo de encerramento: EMERGENCIA', 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(0, 0, 0);
+    }
+    y += 12;
 
     doc.setFontSize(12);
     doc.text('PRESSOES E FLUXOS', 20, y); y += 10;
     doc.setFontSize(10);
 
-    if (dadosAtual) {
-        doc.text(`Camara: ${dadosAtual.pressaoCamaraMbar.toFixed(2)} mBar`, 20, y); y += 8;
-        doc.text(`Tubo 1: ${dadosAtual.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo1LPM.toFixed(1)} LPM`, 20, y); y += 8;
-        doc.text(`Tubo 2: ${dadosAtual.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo2LPM.toFixed(1)} LPM`, 20, y); y += 8;
-        doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, y); y += 8;
-        doc.text(`Temperatura Oleo: ${dadosAtual.temperaturaOleo.toFixed(1)} C`, 20, y); y += 15;
+    if (dadosRef) {
+        doc.text(`Camara: ${dadosRef.pressaoCamaraMbar.toFixed(2)} mBar`, 20, y); y += 7;
+        doc.text(`Tubo 1: ${dadosRef.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosRef.fluxoTubo1LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Tubo 2: ${dadosRef.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosRef.fluxoTubo2LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Tubo 3: ${dadosRef.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosRef.fluxoTubo3LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Temperatura Oleo: ${dadosRef.temperaturaOleo ? dadosRef.temperaturaOleo.toFixed(1) : dadosOleo.temperatura.toFixed(1)} C`, 20, y); y += 7;
     } else {
-        doc.text('Nenhum dado de processo disponivel.', 20, y); y += 15;
+        doc.text('Nenhum dado de processo disponivel.', 20, y); y += 7;
     }
+    y += 5;
 
     doc.setFontSize(12);
     doc.text('STATUS DOS COMPONENTES', 20, y); y += 10;
     doc.setFontSize(10);
-    doc.text(`Bomba: ${dadosAtual ? (dadosAtual.bombaLigada ? 'LIGADA' : 'DESLIGADA') : '--'}`, 20, y); y += 8;
-    doc.text(`Servo: ${dadosAtual ? dadosAtual.servoAngulo + ' graus' : '--'}`, 20, y); y += 8;
-    doc.text(`Tubo 1: ${mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 8;
-    doc.text(`Tubo 2: ${mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 8;
+    doc.text(`Bomba: ${dadosRef ? (dadosRef.bombaLigada ? 'LIGADA' : 'DESLIGADA') : '--'}`, 20, y); y += 7;
+    doc.text(`Servo: ${dadosRef ? dadosRef.servoAngulo + ' graus' : '--'}`, 20, y); y += 7;
+    doc.text(`Tubo 1: ${mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 7;
+    doc.text(`Tubo 2: ${mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 7;
     doc.text(`Tubo 3: ${mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y);
+    y += 14;
 
-    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text('GRAFICOS DO CICLO', 20, y); y += 8;
+
+    if (y + 55 > 270) { doc.addPage(); y = 20; }
+    desenharGraficoPDF(doc, 15, y, 180, 50, historicoVacuo.labels, historicoVacuo.values, SENSOR_MBAR_MIN, SENSOR_MBAR_MAX, 'Pressao Camara (mBar)', [50, 80, 180]);
+    y += 58;
+
+    if (y + 55 > 270) { doc.addPage(); y = 20; }
+    const oleoLabels = window.oleoChart ? window.oleoChart.data.labels : [];
+    const oleoValues = window.oleoChart ? window.oleoChart.data.datasets[0].data : [];
+    desenharGraficoPDF(doc, 15, y, 87, 50, oleoLabels, oleoValues, 0, 10, 'Pressao Oleo (Bar)', [189, 2, 2]);
+    desenharGraficoPDF(doc, 108, y, 87, 50, historicoTemp.labels, historicoTemp.values, 20, 65, 'Temperatura Oleo (C)', [200, 120, 0]);
+    y += 58;
+
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(8);
-    doc.text('Relatorio gerado automaticamente - TSEA Energy', 105, 280, { align: 'center' });
+    doc.text('Relatorio gerado automaticamente - TSEA Energy', 105, 285, { align: 'center' });
 
-    const filename = `ciclo_${cicloAtualId}_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const tipo = isEmergencia ? 'EMERGENCIA' : 'ciclo';
+    const filename = `${tipo}_${cicloAtualId - 1}_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(filename);
-    console.log('PDF ciclo gerado:', filename);
+    console.log('PDF gerado:', filename);
 }
 
 // =============================================
 //  RELATÓRIO MENSAL
 // =============================================
 async function gerarRelatorioMensal() {
+    if (!window.jspdf) { console.warn('jsPDF nao carregou — PDF ignorado.'); return; }
     const { jsPDF } = window.jspdf;
     const agora = new Date();
     const ano = agora.getFullYear();
     const mes = agora.getMonth() + 1;
-    const chave = `ciclos_vacuo_${ano}_${String(mes).padStart(2, '0')}`;
+    const chave = `ciclos_vacuo_${ano}_${String(mes).padStart(2, '00')}`;
 
     let ciclos = [];
-    try { ciclos = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) { /* noop */ }
+    try { ciclos = JSON.parse(storageGet(chave) || '[]'); } catch { }
 
     const meses = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
         'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -891,15 +1300,15 @@ async function gerarRelatorioMensal() {
 
     const doc = new jsPDF();
 
-    doc.setFillColor(20, 20, 20);
+    doc.setFillColor(18, 18, 20);
     doc.rect(0, 0, 210, 45, 'F');
     doc.setTextColor(232, 232, 232);
-    doc.setFontSize(18);
+    doc.setFontSize(15);
     doc.text('RELATORIO MENSAL - SISTEMA DE VACUO', 105, 14, { align: 'center' });
-    doc.setFontSize(11);
-    doc.setTextColor(170, 170, 170);
+    doc.setFontSize(10);
+    doc.setTextColor(160, 160, 160);
     doc.text('TSEA Energy', 105, 23, { align: 'center' });
-    doc.text(`${nomeMes} / ${ano}   —   Gerado em: ${agora.toLocaleString('pt-BR')}`, 105, 31, { align: 'center' });
+    doc.text(`${nomeMes} / ${ano}   —   Gerado em: ${agora.toLocaleString('pt-BR')}`, 105, 30, { align: 'center' });
     doc.text(`Operador solicitante: ${usuarioAtual || 'Nao identificado'}`, 105, 38, { align: 'center' });
 
     let y = 55;
@@ -912,32 +1321,56 @@ async function gerarRelatorioMensal() {
         doc.text(`Total de ciclos em ${nomeMes}: ${ciclos.length}`, 20, y); y += 14;
 
         ciclos.forEach((c) => {
-            if (y > 255) { doc.addPage(); y = 20; }
+            if (y + 80 > 270) { doc.addPage(); y = 20; }
 
-            doc.setFillColor(235, 235, 235);
-            doc.rect(15, y - 4, 180, 7, 'F');
-            doc.setTextColor(40, 40, 40);
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'bold');
-            doc.text(`CICLO #${c.id}   —   ${c.dataHora}   —   Operador: ${c.operador}`, 18, y + 1);
-            doc.setFont(undefined, 'normal');
+            if (c.emergencia) {
+                doc.setFillColor(255, 218, 218);
+                doc.rect(15, y - 4, 180, 8, 'F');
+                doc.setTextColor(150, 0, 0);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(`[EMERGENCIA] CICLO #${c.id}   —   ${c.dataHora}   —   Op: ${c.operador}`, 18, y + 1);
+                doc.setFont(undefined, 'normal');
+                doc.setTextColor(0, 0, 0);
+            } else {
+                doc.setFillColor(232, 232, 235);
+                doc.rect(15, y - 4, 180, 8, 'F');
+                doc.setTextColor(30, 30, 30);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text(`CICLO #${c.id}   —   ${c.dataHora}   —   Operador: ${c.operador}`, 18, y + 1);
+                doc.setFont(undefined, 'normal');
+            }
             y += 11;
 
             doc.setTextColor(60, 60, 60);
             doc.setFontSize(9);
             doc.text(`Duracao: ${c.tempoOperacao}`, 20, y); y += 6;
             doc.text(`Pressao Camara: ${c.pressaoCamara} mBar   |   Temperatura: ${c.temperatura} C`, 20, y); y += 6;
-            doc.text(`Tubo 1: ${c.pressaoT1} mBar / ${c.fluxoT1} LPM   |   Tubo 2: ${c.pressaoT2} mBar / ${c.fluxoT2} LPM   |   Tubo 3: ${c.pressaoT3} mBar / ${c.fluxoT3} LPM`, 20, y); y += 6;
-            doc.text(`Conexoes: T1 ${c.tubo1}  |  T2 ${c.tubo2}  |  T3 ${c.tubo3}   |   Servo: ${c.servo}`, 20, y); y += 12;
+            doc.text(`T1: ${c.pressaoT1} mBar / ${c.fluxoT1} LPM   |   T2: ${c.pressaoT2} mBar / ${c.fluxoT2} LPM   |   T3: ${c.pressaoT3} mBar / ${c.fluxoT3} LPM`, 20, y); y += 6;
+            doc.text(`Conexoes: T1 ${c.tubo1}  |  T2 ${c.tubo2}  |  T3 ${c.tubo3}   |   Servo: ${c.servo}`, 20, y); y += 8;
+
+            if (c.graficoPressaoValues && c.graficoPressaoValues.length > 1) {
+                if (y + 42 > 270) { doc.addPage(); y = 20; }
+                desenharGraficoPDF(doc, 15, y, 57, 38, c.graficoPressaoLabels, c.graficoPressaoValues, SENSOR_MBAR_MIN, SENSOR_MBAR_MAX, 'Pressao Vacuo (mBar)', [50, 80, 180]);
+                if (c.graficoOleoValues && c.graficoOleoValues.length > 1) {
+                    desenharGraficoPDF(doc, 80, y, 57, 38, c.graficoOleoLabels, c.graficoOleoValues, 0, 10, 'Pressao Oleo (Bar)', [189, 2, 2]);
+                }
+                if (c.graficoTempValues && c.graficoTempValues.length > 1) {
+                    desenharGraficoPDF(doc, 145, y, 57, 38, c.graficoTempLabels, c.graficoTempValues, 20, 65, 'Temperatura (C)', [200, 120, 0]);
+                }
+                y += 44;
+            }
+            y += 6;
         });
     }
 
-    doc.setTextColor(140, 140, 140);
+    doc.setTextColor(130, 130, 130);
     doc.setFontSize(8);
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
-        doc.text(`TSEA Energy  —  Relatorio Mensal ${nomeMes}/${ano}  —  Pagina ${p} de ${totalPages}`, 105, 290, { align: 'center' });
+        doc.text(`TSEA Energy  —  Relatorio Mensal ${nomeMes}/${ano}  —  Pagina ${p} de ${totalPages}`, 105, 292, { align: 'center' });
     }
 
     const filename = `relatorio_mensal_${ano}_${String(mes).padStart(2, '0')}_${usuarioAtual || 'anonimo'}.pdf`;
@@ -950,13 +1383,12 @@ async function gerarRelatorioMensal() {
 // =============================================
 function atualizarRelogio() {
     const agora = new Date();
-    const dia = String(agora.getDate()).padStart(2, '0');
-    const mes = String(agora.getMonth() + 1).padStart(2, '0');
-    const ano = String(agora.getFullYear()).slice(-2);
-    const hora = String(agora.getHours()).padStart(2, '0');
-    const min = String(agora.getMinutes()).padStart(2, '0');
-    const seg = String(agora.getSeconds()).padStart(2, '0');
-
-    const relogio = document.getElementById('relogioDisplay');
-    if (relogio) relogio.textContent = `TSEA Energy  |  ${dia}/${mes}/${ano}  ${hora}:${min}:${seg}`;
+    const dd = String(agora.getDate()).padStart(2, '0');
+    const mm = String(agora.getMonth() + 1).padStart(2, '0');
+    const yy = String(agora.getFullYear()).slice(-2);
+    const hh = String(agora.getHours()).padStart(2, '0');
+    const mi = String(agora.getMinutes()).padStart(2, '0');
+    const ss = String(agora.getSeconds()).padStart(2, '0');
+    const el = document.getElementById('relogioDisplay');
+    if (el) el.textContent = `TSEA Energy  |  ${dd}/${mm}/${yy}  ${hh}:${mi}:${ss}`;
 }

@@ -1,4 +1,159 @@
-/* RESET */
+/* ==========================================================================
+   RESET & TOKENS DE COR (TSEA ENERGY SYSTEM)
+   ========================================================================== */
+
+:root,
+[data-theme="dark"] {
+    --bg-root: #16161a;
+    --bg-panel: #1e1e23;
+    --bg-surface: #26262c;
+    --bg-inset: #111114;
+    --border-subtle: #2e2e35;
+    --border-mid: #3a3a42;
+    --text-primary: #eeeef2;
+    --text-secondary: #8888a0;
+    --text-muted: #4e4e62;
+    --accent: #e20613;
+    --accent-dim: rgba(226,6,19,.10);
+    --accent-border: #5a0b11;
+    --green: #4eca60;
+    --green-bg: rgba(78,202,96,.08);
+    --green-border: #1a4220;
+    /* válvulas */
+    --valve-open: #4eca60;
+    --valve-closed: #e20613;
+    --timer-color: #eeeef2;
+    --chart-line: #c0c0d0;
+    --gauge-bar: linear-gradient(to top, #c40510, #ff3d4a);
+}
+
+/* ==========================================================================
+   RESET & TOKENS DE COR (TSEA ENERGY SYSTEM) - TEMA CLARO CORRIGIDO
+   ========================================================================== */
+
+[data-theme="light"] {
+    --bg-root: #f5f2ef; /* Fundo geral mais suave, levemente quente */
+    --bg-panel: #ffffff; /* Painéis brancos puros */
+    --bg-surface: #f0ede8; /* Superfícies sutis */
+    --bg-inset: #e8e4de; /* Insetos mais escuros mas suaves */
+    --border-subtle: #d6d0c8; /* Bordas suaves */
+    --border-mid: #c2bbb2; /* Bordas médias */
+    --text-primary: #2a2520; /* Texto principal escuro mas não preto */
+    --text-secondary: #6b6359; /* Texto secundário */
+    --text-muted: #9c958c; /* Texto desabilitado */
+    --accent: #d0000a; /* Vermelho mais forte e vibrante */
+    --accent-dim: rgba(208,0,10,0.08); /* Fundo vermelho sutil */
+    --accent-border: #aa0018; /* Borda vermelha mais escura */
+    --green: #1a6e2a; /* Verde mais escuro para contraste */
+    --green-bg: rgba(26,110,42,0.08);
+    --green-border: #2a7e3a;
+    --valve-open: #1a6e2a; /* Válvula aberta - verde */
+    --valve-closed: #d0000a; /* Válvula fechada - vermelho */
+    --timer-color: #2a2520;
+    --chart-line: #5a5550;
+    --gauge-bar: linear-gradient(to top, #d0000a, #ff3d4a);
+}
+
+    /* Ajuste adicional para textos pequenos e elementos com baixo contraste */
+    [data-theme="light"] .status-value {
+        color: var(--text-primary);
+        font-weight: 800;
+    }
+
+    [data-theme="light"] .info-value {
+        color: var(--text-primary);
+        font-weight: 800;
+    }
+
+    [data-theme="light"] .gauge-value {
+        color: var(--text-primary);
+        font-weight: 800;
+    }
+
+    [data-theme="light"] .panel {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    [data-theme="light"] .btn {
+        font-weight: 700;
+    }
+
+    [data-theme="light"] .btn-start {
+        background-color: var(--green-bg);
+        border: 1px solid var(--green-border);
+        color: #0a5a1a;
+    }
+
+        [data-theme="light"] .btn-start:hover {
+            background-color: rgba(26,110,42,0.15);
+            color: #0a4a14;
+        }
+
+    [data-theme="light"] .btn-relatorio {
+        background-color: var(--bg-surface) !important;
+        border: 1px solid var(--border-mid) !important;
+        color: var(--text-secondary) !important;
+    }
+
+        [data-theme="light"] .btn-relatorio:hover {
+            background-color: var(--bg-inset) !important;
+            color: var(--text-primary) !important;
+        }
+
+    [data-theme="light"] .btn-emergency {
+        background-color: rgba(208,0,10,0.07);
+        border: 1px solid #cc3340;
+        color: #cc0000;
+    }
+
+        [data-theme="light"] .btn-emergency:hover {
+            background-color: var(--accent-border);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+    [data-theme="light"] .timer-container {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+    }
+
+    [data-theme="light"] .gauge-item {
+        background-color: var(--bg-surface);
+    }
+
+    [data-theme="light"] .gauge-bar-wrapper {
+        background-color: var(--bg-panel);
+    }
+
+    [data-theme="light"] .chart-container {
+        background-color: var(--bg-surface);
+    }
+
+    [data-theme="light"] .mangueira-button {
+        background-color: var(--bg-surface);
+    }
+
+        [data-theme="light"] .mangueira-button:hover {
+            background-color: var(--bg-panel);
+        }
+
+        [data-theme="light"] .mangueira-button.conectada {
+            background-color: var(--accent-dim);
+            border-color: var(--accent-border);
+            color: #cc3340;
+        }
+
+    [data-theme="light"] .valve-visual svg rect {
+        stroke-width: 2;
+    }
+
+    [data-theme="light"] .valve-visual svg line {
+        stroke-width: 2;
+    }
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
 * {
     margin: 0;
     padding: 0;
@@ -6,14 +161,56 @@
 }
 
 body {
-    background-color: #0a0a0a;
-    color: #ffffff;
+    background-color: var(--bg-root);
+    color: var(--text-primary);
     font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
     height: 100vh;
     display: flex;
     flex-direction: column;
     padding: 10px 14px;
     overflow: hidden;
+    transition: background-color .25s, color .25s;
+}
+
+/* ==========================================================================
+   TOGGLE DE TEMA
+   ========================================================================== */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+}
+
+.theme-toggle-track {
+    width: 32px;
+    height: 17px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 999px;
+    position: relative;
+    transition: background .2s;
+}
+
+.theme-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: transform .2s, background .2s;
+}
+
+[data-theme="light"] .theme-toggle-thumb {
+    transform: translateX(15px);
+    background: var(--accent);
 }
 
 /* TOP INFO */
@@ -21,18 +218,18 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #444;
+    color: var(--text-muted);
     font-size: 10px;
     font-family: 'IBM Plex Mono', monospace;
     margin-bottom: 6px;
     padding: 0 2px;
-    letter-spacing: 0.5px;
+    letter-spacing: .5px;
 }
 
 .usuario-badge {
-    background-color: rgba(232, 232, 232, 0.05);
-    border: 1px solid #222;
-    color: #666;
+    background-color: var(--accent-dim);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
     padding: 3px 10px;
     border-radius: 2px;
     font-size: 10px;
@@ -40,27 +237,31 @@ body {
     font-family: 'IBM Plex Mono', monospace;
 }
 
-/* PAINEIS */
+/* PAINÉIS BASE */
 .panel {
-    background-color: #111;
-    border: 1px solid #222;
-    border-radius: 4px;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 5px;
+    transition: background-color .25s, border-color .25s;
 }
 
-/* HEADER */
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
 .header-panel {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 14px;
+    padding: 10px 16px;
     margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
 }
 
 .header-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 2px;
-    color: #e8e8e8;
+    letter-spacing: 3px;
+    color: var(--text-primary);
     font-family: 'IBM Plex Mono', monospace;
 }
 
@@ -70,25 +271,27 @@ body {
     justify-content: center;
     width: 28px;
     height: 28px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
-    color: #cc3333;
-    background-color: rgba(204, 51, 51, 0.08);
+    color: var(--accent);
+    background-color: var(--accent-dim);
     border-radius: 3px;
     cursor: pointer;
-    transition: all 0.15s ease;
-    border: 1px solid rgba(204, 51, 51, 0.2);
+    transition: all .15s;
+    border: 1px solid rgba(226,6,19,.2);
     user-select: none;
     font-family: 'IBM Plex Mono', monospace;
 }
 
     .btn-close:hover {
-        background-color: #cc3333;
+        background-color: var(--accent);
         color: #fff;
-        border-color: #cc3333;
+        border-color: var(--accent);
     }
 
-/* ABAS */
+/* ==========================================================================
+   ABAS
+   ========================================================================== */
 .tabs-container {
     margin-bottom: 8px;
 }
@@ -96,32 +299,32 @@ body {
 .tabs-nav {
     display: flex;
     gap: 0;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .tab-button {
-    padding: 7px 16px;
+    padding: 7px 18px;
     background-color: transparent;
-    color: #444;
+    color: var(--text-muted);
     border: none;
-    border-right: 1px solid #1a1a1a;
+    border-right: 1px solid var(--bg-inset);
     cursor: pointer;
     font-size: 10px;
     font-weight: 700;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: all 0.15s ease;
+    transition: all .15s;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     letter-spacing: 1.5px;
 }
 
     .tab-button:hover {
-        color: #999;
+        color: var(--text-secondary);
     }
 
     .tab-button.active {
-        color: #e8e8e8;
-        border-bottom-color: #e8e8e8;
+        color: var(--text-primary);
+        border-bottom-color: var(--accent);
     }
 
 .tab-content {
@@ -137,48 +340,54 @@ body {
         flex: 1;
     }
 
-/* GRID PRINCIPAL */
+/* ==========================================================================
+   GRID PRINCIPAL
+   ========================================================================== */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 210px 1fr 185px;
+    grid-template-columns: 215px 1fr 190px;
     gap: 10px;
     flex: 1;
     min-height: 0;
     height: 100%;
 }
 
-/* LEFT PANEL */
+/* PAINEL ESQUERDO */
 .left-panel {
-    padding: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     overflow-y: auto;
 }
 
 .section-title {
-    color: #444;
+    color: var(--text-muted);
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 2.5px;
     margin-bottom: 2px;
+    text-transform: uppercase;
 }
 
-/* Tubo desconectado (estado inicial) */
+/* TUBOS */
 .mangueira-button {
-    padding: 8px 10px;
-    background-color: #0f0f0f;
-    border: 1px solid #1a1a1a;
-    color: #333;
-    border-radius: 3px;
+    padding: 9px 12px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    border-radius: 4px;
     cursor: pointer;
     font-size: 11px;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: all 0.15s;
+    transition: all .15s;
     font-weight: 500;
     text-align: left;
-    letter-spacing: 0.3px;
+    letter-spacing: .3px;
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
     .mangueira-button::before {
@@ -187,40 +396,39 @@ body {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background-color: #2a2a2a;
-        margin-right: 8px;
-        vertical-align: middle;
-        transition: background-color 0.15s;
+        background-color: var(--border-mid);
+        flex-shrink: 0;
+        transition: background-color .15s;
     }
 
     .mangueira-button:hover {
-        background-color: #141414;
-        border-color: #2a2a2a;
-        color: #555;
+        background-color: var(--bg-surface);
+        border-color: var(--border-mid);
+        color: var(--text-secondary);
     }
 
-    /* Tubo conectado */
     .mangueira-button.conectada {
-        background-color: rgba(100, 180, 120, 0.05);
-        border-color: #1e3a26;
-        color: #6a9;
+        background-color: var(--accent-dim);
+        border-color: var(--accent-border);
+        color: #ff7070;
     }
 
         .mangueira-button.conectada::before {
-            background-color: #4a8;
+            background-color: var(--accent);
         }
 
         .mangueira-button.conectada:hover {
-            background-color: rgba(100, 180, 120, 0.08);
-            border-color: #254a2e;
+            background-color: rgba(226,6,19,.13);
+            border-color: #801218;
         }
 
 .divider {
     border: none;
-    border-top: 1px solid #1a1a1a;
+    border-top: 1px solid var(--border-subtle);
     margin: 2px 0;
 }
 
+/* STATUS */
 .status-item {
     display: flex;
     flex-direction: column;
@@ -228,7 +436,7 @@ body {
 }
 
 .status-label {
-    color: #333;
+    color: var(--text-muted);
     font-size: 9px;
     letter-spacing: 1.5px;
     font-weight: 700;
@@ -242,13 +450,14 @@ body {
 }
 
     .status-value.on {
-        color: #ccc;
+        color: var(--text-primary);
     }
 
     .status-value.off {
-        color: #cc4444;
+        color: var(--accent);
     }
 
+/* BOTÕES */
 .button-group {
     display: flex;
     flex-direction: column;
@@ -257,151 +466,155 @@ body {
 }
 
 .btn {
-    padding: 9px;
+    padding: 10px 12px;
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all .15s;
     font-size: 10px;
     letter-spacing: 1.5px;
     font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .btn-relatorio {
-    background-color: #1a3a5c !important;
-    color: #7ab !important;
-    border: 1px solid #1e4a72 !important;
+    background-color: var(--bg-surface) !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-mid) !important;
 }
 
     .btn-relatorio:hover {
-        background-color: #1e4a72 !important;
-        color: #9cd !important;
+        background-color: var(--bg-inset) !important;
+        color: var(--text-primary) !important;
     }
 
 .btn-start {
-    background-color: #1a3a26;
-    color: #6a9;
-    border: 1px solid #1e4a30;
+    background-color: var(--green-bg);
+    color: var(--green);
+    border: 1px solid var(--green-border);
 }
 
     .btn-start:hover {
-        background-color: #1e4a30;
-        color: #8bc;
+        background-color: rgba(78,202,96,.14);
+        color: #72e882;
     }
 
     .btn-start:disabled {
-        background-color: #111;
+        background-color: var(--bg-inset);
         cursor: not-allowed;
-        color: #333;
-        border: 1px solid #1a1a1a;
+        color: var(--text-muted);
+        border: 1px solid var(--border-subtle);
+        opacity: .5;
     }
 
 .btn-emergency {
-    background-color: #3a1a1a;
-    color: #c66;
-    border: 1px solid #4a1e1e;
+    background-color: rgba(226,6,19,.07);
+    color: #ff7070;
+    border: 1px solid var(--accent-border);
 }
 
     .btn-emergency:hover {
-        background-color: #4a1e1e;
-        color: #e88;
+        background-color: var(--accent-border);
+        color: #fff;
     }
 
+/* TIMER */
 .timer-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     padding: 12px 10px;
-    background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 3px;
-    border: 1px solid #1a1a1a;
+    background-color: var(--bg-inset);
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
     margin-top: auto;
 }
 
 .timer-label {
-    color: #333;
+    color: var(--text-muted);
     font-size: 8px;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     font-weight: 700;
 }
 
 .timer-value {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
-    color: #e8e8e8;
+    color: var(--timer-color);
     font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
+    line-height: 1;
 }
 
 .timer-limit {
     font-size: 9px;
-    color: #444;
+    color: var(--accent);
     font-family: 'IBM Plex Mono', monospace;
     letter-spacing: 1px;
     min-height: 12px;
 }
 
-/* CENTER PANEL */
+/* ==========================================================================
+   PAINEL CENTRAL
+   ========================================================================== */
 .center-panel {
     padding: 14px 16px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    gap: 12px;
+    gap: 10px;
 }
 
 .chart-header {
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     flex-shrink: 0;
 }
 
 .chart-title {
-    color: #333;
+    color: var(--text-muted);
     font-size: 9px;
     letter-spacing: 2px;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .chart-main-value {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 700;
-    color: #e8e8e8;
+    color: var(--text-primary);
     font-family: 'IBM Plex Mono', monospace;
     letter-spacing: -1px;
+    line-height: 1;
 }
 
 .chart-container {
     flex: 0.6;
     position: relative;
     min-height: 0;
-    height: 180px;
-    background-color: #111;
-    border: 1px solid #222;
-    border-radius: 3px;
+    height: 175px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
     padding: 8px;
 }
 
 .gauge-header {
-    margin-top: 4px;
     flex-shrink: 0;
 }
 
 .gauge-title {
-    color: #333;
+    color: var(--text-muted);
     font-size: 9px;
     letter-spacing: 2px;
     font-weight: 700;
 }
 
-/* GAUGE CONTAINER */
 .gauge-container {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    gap: 7px;
     flex: 0.4;
     min-height: 0;
     height: auto;
@@ -412,54 +625,58 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    background-color: #111;
-    border: 1px solid #222;
-    border-radius: 3px;
+    gap: 5px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
     padding: 8px 6px;
     min-height: 0;
     flex: 1;
     justify-content: flex-end;
+    transition: border-color .2s;
 }
+
+    .gauge-item:hover {
+        border-color: var(--border-mid);
+    }
 
 .gauge-bar-wrapper {
     width: 100%;
-    height: 80px;
-    background-color: #0a0a0a;
-    border: 1px solid #222;
+    height: 76px;
+    background-color: var(--bg-root);
+    border: 1px solid var(--border-subtle);
     border-radius: 2px;
     position: relative;
     overflow: hidden;
     display: flex;
     flex-direction: column-reverse;
-    min-height: 0;
 }
 
 .gauge-bar {
     width: 100%;
     height: 0%;
-    background: linear-gradient(to top, #e8e8e8, #aaa);
-    transition: height 0.3s ease;
+    background: var(--gauge-bar);
+    transition: height .35s ease;
     border-radius: 1px;
 }
 
 .gauge-label {
-    color: #666;
+    color: var(--text-muted);
     font-size: 8px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: .8px;
     text-align: center;
 }
 
 .gauge-value {
-    color: #e8e8e8;
-    font-size: 11px;
+    color: var(--text-primary);
+    font-size: 10px;
     font-weight: 700;
     font-family: 'IBM Plex Mono', monospace;
     text-align: center;
 }
 
-/* RIGHT PANEL */
+/* PAINEL DIREITO */
 .right-panel {
     padding: 14px 12px;
     display: flex;
@@ -472,7 +689,7 @@ body {
     flex-direction: column;
     gap: 3px;
     padding: 10px 0;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
     .info-block:first-child {
@@ -484,7 +701,7 @@ body {
     }
 
 .info-label {
-    color: #333;
+    color: var(--text-muted);
     font-size: 9px;
     letter-spacing: 1.5px;
     font-weight: 700;
@@ -493,19 +710,21 @@ body {
 .info-value {
     font-size: 18px;
     font-weight: 700;
-    color: #e8e8e8;
+    color: var(--text-primary);
     font-family: 'IBM Plex Mono', monospace;
     line-height: 1;
 }
 
 .info-unit {
-    color: #444;
+    color: var(--text-muted);
     font-size: 10px;
     font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 0.5px;
+    letter-spacing: .5px;
 }
 
-/* VALVULAS */
+/* ==========================================================================
+   VÁLVULAS
+   ========================================================================== */
 .valves-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -530,7 +749,7 @@ body {
 
     .valve-header h3 {
         font-size: 11px;
-        color: #ccc;
+        color: var(--text-secondary);
         letter-spacing: 2px;
         font-weight: 700;
     }
@@ -544,16 +763,17 @@ body {
     font-family: 'IBM Plex Mono', monospace;
 }
 
+    /* ABERTA = verde, FECHADA = vermelho */
     .valve-status.on {
-        background-color: rgba(200,220,200,0.08);
-        color: #8a8;
-        border: 1px solid #2a3a2a;
+        background-color: var(--green-bg);
+        color: var(--green);
+        border: 1px solid var(--green-border);
     }
 
     .valve-status.off {
-        background-color: rgba(220,100,100,0.08);
-        color: #a66;
-        border: 1px solid #3a2020;
+        background-color: var(--accent-dim);
+        color: #ff7070;
+        border: 1px solid var(--accent-border);
     }
 
 .valve-visual {
@@ -561,9 +781,10 @@ body {
     justify-content: center;
     align-items: center;
     height: 190px;
-    background-color: rgba(255,255,255,0.02);
-    border-radius: 3px;
-    border: 1px solid #1a1a1a;
+    background-color: var(--bg-inset);
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    transition: border-color .3s;
 }
 
     .valve-visual svg {
@@ -572,24 +793,45 @@ body {
         max-width: 120px;
     }
 
+        /* SVG dinâmico: cor padrão via CSS, sobrescrita por JS conforme estado */
+        .valve-visual svg rect {
+            stroke: var(--valve-open) !important;
+            transition: stroke .3s;
+        }
+
+        .valve-visual svg circle {
+            stroke: var(--text-secondary) !important;
+            fill: var(--bg-panel) !important;
+        }
+
+        .valve-visual svg text {
+            fill: var(--valve-open) !important;
+            transition: fill .3s;
+        }
+
+        .valve-visual svg line {
+            stroke: var(--valve-open) !important;
+            transition: stroke .3s;
+        }
+
 .servo-button {
-    padding: 8px 12px;
-    background-color: #0f0f0f;
-    border: 1px solid #222;
-    color: #666;
-    border-radius: 3px;
+    padding: 9px 12px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: 4px;
     cursor: pointer;
     font-size: 9px;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: all 0.15s;
+    transition: all .15s;
     font-weight: 700;
     letter-spacing: 1px;
 }
 
     .servo-button:hover {
-        background-color: #151515;
-        border-color: #333;
-        color: #999;
+        background-color: var(--bg-surface);
+        border-color: var(--border-mid);
+        color: var(--text-primary);
     }
 
 .valve-info {
@@ -603,7 +845,7 @@ body {
         display: flex;
         justify-content: space-between;
         padding-bottom: 6px;
-        border-bottom: 1px solid #1a1a1a;
+        border-bottom: 1px solid var(--border-subtle);
     }
 
         .valve-info p:last-child {
@@ -611,30 +853,29 @@ body {
         }
 
     .valve-info span {
-        color: #444;
+        color: var(--text-muted);
         font-size: 10px;
-        letter-spacing: 0.5px;
+        letter-spacing: .5px;
     }
 
     .valve-info strong {
-        color: #ccc;
+        color: var(--text-primary);
         font-family: 'IBM Plex Mono', monospace;
         font-size: 11px;
     }
 
-/* MODAIS */
+/* ==========================================================================
+   MODAIS
+   ========================================================================== */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.88);
+    inset: 0;
+    background-color: rgba(5,5,8,.90);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 9999;
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(6px);
 }
 
     .modal-overlay.hidden {
@@ -642,89 +883,125 @@ body {
     }
 
 .modal-content {
-    background-color: #111;
-    border: 1px solid #222;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-mid);
     padding: 36px;
-    border-radius: 4px;
+    border-radius: 6px;
     text-align: center;
     max-width: 340px;
     width: 90%;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.9);
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
 }
 
 .modal-logo {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 4px;
-    color: #333;
+    color: var(--accent);
     margin-bottom: 14px;
     font-weight: 700;
 }
 
 .modal-content h2 {
-    font-size: 16px;
+    font-size: 15px;
     margin-bottom: 8px;
-    color: #e8e8e8;
+    color: var(--text-primary);
     letter-spacing: 2px;
     font-weight: 700;
     font-family: 'IBM Plex Mono', monospace;
 }
 
 .modal-content p {
-    color: #444;
+    color: var(--text-muted);
     margin-bottom: 20px;
     font-size: 11px;
-    letter-spacing: 0.5px;
+    letter-spacing: .5px;
 }
 
 #inputId {
     width: 100%;
-    padding: 12px 14px;
-    background-color: #0a0a0a;
-    border: 1px solid #222;
-    color: #e8e8e8;
-    border-radius: 3px;
-    font-size: 16px;
+    padding: 13px 14px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 18px;
     margin-bottom: 14px;
-    transition: all 0.15s;
+    transition: border-color .2s, box-shadow .2s;
     text-transform: uppercase;
-    letter-spacing: 4px;
+    letter-spacing: 5px;
     text-align: center;
     font-family: 'IBM Plex Mono', monospace;
     font-weight: 700;
+    outline: none;
 }
 
     #inputId:focus {
-        outline: none;
-        border-color: #444;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-dim);
     }
 
+    #inputId:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+/* Botão do modal com estado de loading */
 .btn-modal {
-    background-color: #1a3a26 !important;
-    color: #6a9 !important;
-    border: 1px solid #1e4a30 !important;
+    background-color: rgba(226,6,19,.08) !important;
+    color: #ff7070 !important;
+    border: 1px solid var(--accent-border) !important;
     width: 100%;
-    padding: 11px !important;
+    padding: 12px !important;
     margin-bottom: 12px;
     font-size: 10px !important;
     letter-spacing: 2px;
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all .15s;
 }
 
-    .btn-modal:hover {
-        background-color: #1e4a30 !important;
-        color: #8bc !important;
+    .btn-modal:hover:not(:disabled) {
+        background-color: var(--accent-border) !important;
+        color: #fff !important;
     }
 
+    .btn-modal:disabled {
+        cursor: not-allowed;
+        opacity: .75;
+    }
+
+/* Spinner de loading */
+.btn-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,112,112,.3);
+    border-top-color: #ff7070;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .error-msg {
-    background-color: rgba(180,60,60,0.08);
-    border-left: 2px solid #844;
-    color: #a66;
+    background-color: var(--accent-dim);
+    border-left: 2px solid var(--accent);
+    color: #ff7070;
     padding: 10px 12px;
     border-radius: 2px;
     font-size: 10px;
     display: none;
     text-align: left;
-    letter-spacing: 0.3px;
+    letter-spacing: .3px;
     font-family: 'IBM Plex Mono', monospace;
 }
 
@@ -732,23 +1009,23 @@ body {
         display: block;
     }
 
-/* MODAL CONFIRMAR FECHAR */
+/* MODAIS DE CONFIRMAÇÃO */
 .modal-confirm {
-    background-color: #111;
-    border: 1px solid #222;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-mid);
     padding: 32px 28px;
-    border-radius: 4px;
+    border-radius: 6px;
     text-align: center;
     max-width: 340px;
     width: 90%;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.9);
-    animation: modalIn 0.15s ease;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
+    animation: modalIn .15s ease;
 }
 
 @keyframes modalIn {
     from {
         opacity: 0;
-        transform: scale(0.97) translateY(-8px);
+        transform: scale(.97) translateY(-8px);
     }
 
     to {
@@ -760,7 +1037,7 @@ body {
 .modal-confirm-icon {
     width: 40px;
     height: 40px;
-    border: 2px solid #4a1e1e;
+    border: 2px solid var(--accent-border);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -768,43 +1045,36 @@ body {
     margin: 0 auto 16px;
     font-size: 18px;
     font-weight: 700;
-    color: #c66;
+    color: var(--accent);
     font-family: 'IBM Plex Mono', monospace;
 }
 
-/* Icone do modal timer em verde */
-#modalTimer .modal-confirm-icon {
-    border-color: #1e4a30;
-    color: #6a9;
-}
-
-/* Icone do modal tempo encerrado em verde */
+#modalTimer .modal-confirm-icon,
 #modalTempoEncerrado .modal-confirm-icon {
-    border-color: #1e4a30;
-    color: #6a9;
+    border-color: var(--green-border);
+    color: var(--green);
 }
 
-/* Botao emergencia ativa (pulsando) */
 .btn-emergency-ativa {
-    background-color: #cc3333 !important;
+    background-color: var(--accent) !important;
     color: #fff !important;
-    border-color: #ff4444 !important;
+    border-color: #ff3d4a !important;
     animation: pulseEmergencia 1.2s ease-in-out infinite;
 }
 
 @keyframes pulseEmergencia {
-    0%, 100% {
+    0%,100% {
         opacity: 1;
     }
 
     50% {
-        opacity: 0.7;
+        opacity: .62;
     }
 }
 
 .modal-confirm h3 {
     font-size: 14px;
-    color: #e8e8e8;
+    color: var(--text-primary);
     margin-bottom: 8px;
     font-weight: 700;
     letter-spacing: 1px;
@@ -813,10 +1083,10 @@ body {
 
 .modal-confirm p {
     font-size: 11px;
-    color: #444;
+    color: var(--text-secondary);
     margin-bottom: 16px;
     line-height: 1.6;
-    letter-spacing: 0.3px;
+    letter-spacing: .3px;
 }
 
 .modal-confirm-buttons {
@@ -827,57 +1097,58 @@ body {
 .btn-confirm-cancel {
     flex: 1;
     padding: 10px;
-    background-color: #0f0f0f;
-    border: 1px solid #222;
-    color: #555;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
     border-radius: 3px;
     cursor: pointer;
     font-size: 10px;
     font-weight: 700;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: all 0.15s;
+    transition: all .15s;
     letter-spacing: 1px;
 }
 
     .btn-confirm-cancel:hover {
-        background-color: #151515;
-        color: #999;
-        border-color: #333;
+        background-color: var(--bg-surface);
+        color: var(--text-secondary);
+        border-color: var(--border-mid);
     }
 
 .btn-confirm-ok {
     flex: 1;
     padding: 10px;
-    background-color: #3a1a1a;
-    border: 1px solid #4a1e1e;
-    color: #c66;
+    background-color: rgba(226,6,19,.08);
+    border: 1px solid var(--accent-border);
+    color: #ff7070;
     border-radius: 3px;
     cursor: pointer;
     font-size: 10px;
     font-weight: 700;
     font-family: 'IBM Plex Sans', sans-serif;
-    transition: all 0.15s;
+    transition: all .15s;
     letter-spacing: 1px;
 }
 
     .btn-confirm-ok:hover {
-        background-color: #4a1e1e;
-        color: #e88;
+        background-color: var(--accent-border);
+        color: #fff;
     }
 
-/* Botao iniciar do modal timer (verde) */
 .btn-confirm-start {
-    background-color: #1a3a26 !important;
-    border-color: #1e4a30 !important;
-    color: #6a9 !important;
+    background-color: var(--green-bg) !important;
+    border-color: var(--green-border) !important;
+    color: var(--green) !important;
 }
 
     .btn-confirm-start:hover {
-        background-color: #1e4a30 !important;
-        color: #8bc !important;
+        background-color: rgba(78,202,96,.18) !important;
+        color: #80ee90 !important;
     }
 
-/* DRUM PICKER */
+/* ==========================================================================
+   DRUM PICKER
+   ========================================================================== */
 .drum-picker-group {
     display: flex;
     align-items: flex-end;
@@ -895,7 +1166,7 @@ body {
 
 .drum-label {
     font-size: 8px;
-    color: #444;
+    color: var(--text-muted);
     letter-spacing: 1.5px;
     font-weight: 700;
     font-family: 'IBM Plex Mono', monospace;
@@ -904,7 +1175,7 @@ body {
 .drum-sep {
     font-size: 24px;
     font-weight: 700;
-    color: #333;
+    color: var(--border-mid);
     font-family: 'IBM Plex Mono', monospace;
     padding-bottom: 4px;
 }
@@ -914,9 +1185,9 @@ body {
     width: 62px;
     height: 120px;
     overflow: hidden;
-    border: 1px solid #222;
+    border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    background: #0a0a0a;
+    background: var(--bg-inset);
     cursor: ns-resize;
     user-select: none;
 }
@@ -928,15 +1199,14 @@ body {
     right: 0;
     height: 36px;
     transform: translateY(-50%);
-    border-top: 1px solid #333;
-    border-bottom: 1px solid #333;
-    background: rgba(232,232,232,0.04);
+    border-top: 1px solid var(--border-mid);
+    border-bottom: 1px solid var(--border-mid);
+    background: rgba(226,6,19,.03);
     pointer-events: none;
     z-index: 2;
 }
 
-.drum-fade-top,
-.drum-fade-bot {
+.drum-fade-top, .drum-fade-bot {
     position: absolute;
     left: 0;
     right: 0;
@@ -947,12 +1217,12 @@ body {
 
 .drum-fade-top {
     top: 0;
-    background: linear-gradient(to bottom, #0a0a0a 30%, transparent);
+    background: linear-gradient(to bottom, var(--bg-inset) 30%, transparent);
 }
 
 .drum-fade-bot {
     bottom: 0;
-    background: linear-gradient(to top, #0a0a0a 30%, transparent);
+    background: linear-gradient(to top, var(--bg-inset) 30%, transparent);
 }
 
 .drum-scroll {
@@ -963,7 +1233,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: transform 0.12s ease;
+    transition: transform .12s ease;
 }
 
 .drum-item {
@@ -975,17 +1245,78 @@ body {
     font-size: 20px;
     font-weight: 700;
     font-family: 'IBM Plex Mono', monospace;
-    color: #333;
+    color: var(--border-mid);
     flex-shrink: 0;
-    transition: color 0.15s, font-size 0.15s;
+    transition: color .15s, font-size .15s;
 }
 
     .drum-item.selected {
-        color: #e8e8e8;
+        color: var(--text-primary);
         font-size: 22px;
     }
 
-/* RESPONSIVO */
+.drum-hint-error {
+    background-color: var(--accent-dim);
+    border-left: 2px solid var(--accent);
+    color: #ff7070;
+    padding: 8px 12px;
+    border-radius: 2px;
+    font-size: 10px;
+    text-align: left;
+    letter-spacing: .3px;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 14px;
+}
+
+/* ==========================================================================
+   ABA ÓLEO
+   ========================================================================== */
+.tank-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.tank {
+    position: relative;
+    width: 120px;
+    height: 250px;
+    border: 3px solid #ff3b3b;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--bg-inset);
+}
+
+#oilFill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 0%;
+    background: linear-gradient(to top, #6b0000, #bd0202);
+    transition: height 1s ease, background 1s ease;
+}
+
+.tank-glass {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, rgba(255,255,255,.06), rgba(255,255,255,.01));
+    pointer-events: none;
+}
+
+#oilPercent {
+    color: #ff4a4a;
+    font-size: 26px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ==========================================================================
+   RESPONSIVO
+   ========================================================================== */
 @media (max-width: 1100px) {
     .dashboard-grid {
         grid-template-columns: 190px 1fr 165px;
@@ -1004,17 +1335,4 @@ body {
     .gauge-container {
         grid-template-columns: 1fr;
     }
-}
-
-.drum-hint-error {
-    background-color: rgba(180,60,60,0.08);
-    border-left: 2px solid #844;
-    color: #a66;
-    padding: 8px 12px;
-    border-radius: 2px;
-    font-size: 10px;
-    text-align: left;
-    letter-spacing: 0.3px;
-    font-family: 'IBM Plex Mono', monospace;
-    margin-bottom: 14px;
 }

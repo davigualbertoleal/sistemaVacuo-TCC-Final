@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +7,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- ================================================
+         LIBS LOCAIS — coloque chart.min.js e jspdf.umd.min.js
+         na mesma pasta deste HTML.
+         Downloads:
+           Chart.js  → https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js
+           jsPDF     → https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js
+         Renomeie para chart.min.js e jspdf.umd.min.js
+    ================================================ -->
+    <script src="chart.min.js"></script>
+    <script src="jspdf.umd.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -100,7 +110,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="drum-hint-error" id="drumHint" style="display:none;">Defina um tempo antes de iniciar.</div>
             <div class="modal-confirm-buttons">
                 <button class="btn-confirm-cancel" id="btnCancelarTimer">Cancelar</button>
@@ -111,7 +120,15 @@
 
     <div class="top-info">
         <span id="relogioDisplay">TSEA Energy</span>
-        <span id="usuarioLogado" class="usuario-badge">--</span>
+        <div style="display:flex;align-items:center;gap:14px;">
+            <label class="theme-toggle" id="themeToggle" title="Alternar tema claro/escuro">
+                <span id="themeLabel">ESCURO</span>
+                <div class="theme-toggle-track">
+                    <div class="theme-toggle-thumb"></div>
+                </div>
+            </label>
+            <span id="usuarioLogado" class="usuario-badge">--</span>
+        </div>
     </div>
 
     <header class="panel header-panel">
@@ -123,21 +140,19 @@
         <div class="tabs-nav">
             <button class="tab-button active" data-tab="principal">PRINCIPAL</button>
             <button class="tab-button" data-tab="valvulas">VALVULAS</button>
+            <button class="tab-button" data-tab="oleo">OLEO</button>
         </div>
     </div>
 
     <!-- ABA 1: PRINCIPAL -->
     <main class="tab-content active" id="principal">
         <div class="dashboard-grid">
-
             <div class="panel left-panel">
                 <div class="section-title">TUBOS</div>
                 <button class="mangueira-button" id="btnMangueira1" data-mangueira="1">Tubo 1</button>
                 <button class="mangueira-button" id="btnMangueira2" data-mangueira="2">Tubo 2</button>
                 <button class="mangueira-button" id="btnMangueira3" data-mangueira="3">Tubo 3</button>
-
                 <hr class="divider">
-
                 <div class="status-item">
                     <span class="status-label">BOMBA</span>
                     <span class="status-value on" id="status-bomba">LIGADO</span>
@@ -146,13 +161,11 @@
                     <span class="status-label">ESTADO</span>
                     <span class="status-value on" id="status-estado">OPERACIONAL</span>
                 </div>
-
                 <div class="button-group">
                     <button class="btn btn-relatorio" id="btnRelatorio">GERAR RELATORIO MENSAL</button>
                     <button class="btn btn-start" id="btnIniciar">INICIAR</button>
                     <button class="btn btn-emergency" id="btnEmergencia">EMERGENCIA</button>
                 </div>
-
                 <div class="timer-container">
                     <span class="timer-label">TEMPO DE OPERACAO</span>
                     <span class="timer-value" id="timerDisplay">00:00:00</span>
@@ -168,47 +181,32 @@
                 <div class="chart-container">
                     <canvas id="vacuoChart"></canvas>
                 </div>
-
                 <div class="gauge-header">
                     <div class="gauge-title">METRICAS ADICIONAIS</div>
                 </div>
                 <div class="gauge-container">
                     <div class="gauge-item">
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar" id="gaugeBar2"></div>
-                        </div>
+                        <div class="gauge-bar-wrapper"><div class="gauge-bar" id="gaugeBar2"></div></div>
                         <div class="gauge-label">TEMPERATURA</div>
                         <div class="gauge-value" id="gaugeValue2">-- C</div>
                     </div>
-
                     <div class="gauge-item">
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar" id="gaugeBar3"></div>
-                        </div>
+                        <div class="gauge-bar-wrapper"><div class="gauge-bar" id="gaugeBar3"></div></div>
                         <div class="gauge-label">FLUXO T1</div>
                         <div class="gauge-value" id="gaugeValue3">-- LPM</div>
                     </div>
-
                     <div class="gauge-item">
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar" id="gaugeBar4"></div>
-                        </div>
+                        <div class="gauge-bar-wrapper"><div class="gauge-bar" id="gaugeBar4"></div></div>
                         <div class="gauge-label">FLUXO T2</div>
                         <div class="gauge-value" id="gaugeValue4">-- LPM</div>
                     </div>
-
                     <div class="gauge-item">
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar" id="gaugeBar5"></div>
-                        </div>
+                        <div class="gauge-bar-wrapper"><div class="gauge-bar" id="gaugeBar5"></div></div>
                         <div class="gauge-label">FLUXO T3</div>
                         <div class="gauge-value" id="gaugeValue5">-- LPM</div>
                     </div>
-
                     <div class="gauge-item">
-                        <div class="gauge-bar-wrapper">
-                            <div class="gauge-bar" id="gaugeBar6"></div>
-                        </div>
+                        <div class="gauge-bar-wrapper"><div class="gauge-bar" id="gaugeBar6"></div></div>
                         <div class="gauge-label">PRESSAO DIFER.</div>
                         <div class="gauge-value" id="gaugeValue6">-- mBar</div>
                     </div>
@@ -246,7 +244,6 @@
                     <span class="info-value" id="infoFase">AGUARDANDO</span>
                 </div>
             </div>
-
         </div>
     </main>
 
@@ -273,7 +270,6 @@
                     <p><span>Fluxo</span><strong id="valveFlow1">--</strong></p>
                 </div>
             </div>
-
             <div class="panel valve-panel">
                 <div class="valve-header">
                     <h3>VALVULA 2</h3>
@@ -294,7 +290,6 @@
                     <p><span>Fluxo</span><strong id="valveFlow2">--</strong></p>
                 </div>
             </div>
-
             <div class="panel valve-panel">
                 <div class="valve-header">
                     <h3>VALVULA 3</h3>
@@ -318,6 +313,61 @@
         </div>
     </main>
 
+    <!-- ABA 3: OLEO -->
+    <main class="tab-content" id="oleo">
+        <div class="dashboard-grid">
+            <div class="panel left-panel">
+                <div class="section-title">SISTEMA DE OLEO</div>
+                <div class="status-item">
+                    <span class="status-label">BOMBA OLEO</span>
+                    <span class="status-value on" id="statusOleo">ATIVO</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">CIRCULACAO</span>
+                    <span class="status-value on" id="statusCirculacao">NORMAL</span>
+                </div>
+                <hr class="divider">
+                <div class="info-block">
+                    <span class="info-label">PRESSAO OLEO</span>
+                    <span class="info-value" id="oleoPressao">--</span>
+                    <span class="info-unit">Bar</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">NIVEL TANQUE</span>
+                    <span class="info-value" id="oleoNivel">--</span>
+                    <span class="info-unit">%</span>
+                </div>
+            </div>
+            <div class="panel center-panel">
+                <div class="tank-container">
+                    <div class="tank">
+                        <div id="oilFill"></div>
+                        <div class="tank-glass"></div>
+                    </div>
+                    <div id="oilPercent">0%</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="oleoChart"></canvas>
+                </div>
+            </div>
+            <div class="panel right-panel">
+                <div class="info-block">
+                    <span class="info-label">STATUS FILTRO</span>
+                    <span class="info-value" id="oleoFiltro">--</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">ESTADO</span>
+                    <span class="info-value" id="oleoEstado">AGUARDANDO</span>
+                </div>
+                <div class="info-block">
+                    <span class="info-label">TEMP. OLEO</span>
+                    <span class="info-value" id="oleoTemp">--</span>
+                    <span class="info-unit">C</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
     <script src="script.js"></script>
 </body>
-</html>''
+</html>
