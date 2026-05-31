@@ -1,0 +1,6 @@
+@apiSistemaVacuo_HostAddress = http://localhost:5162
+
+GET {{apiSistemaVacuo_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
