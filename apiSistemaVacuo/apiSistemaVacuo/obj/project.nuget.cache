@@ -1,9 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "z723r6EbFEA=",
+  "dgSpecHash": "Lg0drPFlG8Y=",
   "success": true,
   "projectFilePath": "C:\\Users\\Davi\\source\\repos\\apiSistemaVacuo\\apiSistemaVacuo\\apiSistemaVacuo\\apiSistemaVacuo.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\Davi\\.nuget\\packages\\awssdk.core\\4.0.7.4\\awssdk.core.4.0.7.4.nupkg.sha512",
+    "C:\\Users\\Davi\\.nuget\\packages\\awssdk.extensions.netcore.setup\\4.0.4.2\\awssdk.extensions.netcore.setup.4.0.4.2.nupkg.sha512",
+    "C:\\Users\\Davi\\.nuget\\packages\\awssdk.s3\\4.0.23.5\\awssdk.s3.4.0.23.5.nupkg.sha512",
     "C:\\Users\\Davi\\.nuget\\packages\\bouncycastle.cryptography\\2.6.2\\bouncycastle.cryptography.2.6.2.nupkg.sha512",
     "C:\\Users\\Davi\\.nuget\\packages\\google.protobuf\\3.32.0\\google.protobuf.3.32.0.nupkg.sha512",
     "C:\\Users\\Davi\\.nuget\\packages\\k4os.compression.lz4\\1.3.8\\k4os.compression.lz4.1.3.8.nupkg.sha512",
