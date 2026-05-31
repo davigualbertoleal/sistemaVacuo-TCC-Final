@@ -8,11 +8,43 @@
     ".NETCoreApp,Version=v10.0": {
       "apiSistemaVacuo/1.0.0": {
         "dependencies": {
+          "AWSSDK.Extensions.NETCore.Setup": "4.0.4.2",
+          "AWSSDK.S3": "4.0.23.5",
           "Microsoft.AspNetCore.OpenApi": "10.0.6",
           "MySql.Data": "9.7.0"
         },
         "runtime": {
           "apiSistemaVacuo.dll": {}
+        }
+      },
+      "AWSSDK.Core/4.0.7.4": {
+        "runtime": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.7.4"
+          }
+        }
+      },
+      "AWSSDK.Extensions.NETCore.Setup/4.0.4.2": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.7.4"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.Extensions.NETCore.Setup.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.4.2"
+          }
+        }
+      },
+      "AWSSDK.S3/4.0.23.5": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.7.4"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.S3.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.23.5"
+          }
         }
       },
       "BouncyCastle.Cryptography/2.6.2": {
@@ -182,6 +214,27 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AWSSDK.Core/4.0.7.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-qNlzH2ygJ6JG8uefpvws782PnJlkVEwqRD5vz4fR8wFfwWU3ttyAjiwEOPEYcxl84mhQdYGI9gR+kroGFI2+wA==",
+      "path": "awssdk.core/4.0.7.4",
+      "hashPath": "awssdk.core.4.0.7.4.nupkg.sha512"
+    },
+    "AWSSDK.Extensions.NETCore.Setup/4.0.4.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-4uHKkkLHmv9/Qv4AyR8FdZgIHzqDdvmfEL1t3+VHSBF4Ph5CguE2ubfkm3w8aiilCVZraNZM4VShigH4z+RCFw==",
+      "path": "awssdk.extensions.netcore.setup/4.0.4.2",
+      "hashPath": "awssdk.extensions.netcore.setup.4.0.4.2.nupkg.sha512"
+    },
+    "AWSSDK.S3/4.0.23.5": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-B7UPvqeZD/jIO1eMhCiNRfcvGChjP2yAHIj0NIIhXUVoH2u56YKkIR5CR7lmZfagJN8bCMMZpuxDbYBzgENZ0g==",
+      "path": "awssdk.s3/4.0.23.5",
+      "hashPath": "awssdk.s3.4.0.23.5.nupkg.sha512"
     },
     "BouncyCastle.Cryptography/2.6.2": {
       "type": "package",

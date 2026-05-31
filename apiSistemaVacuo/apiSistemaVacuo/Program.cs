@@ -4,6 +4,12 @@ using Amazon.S3;  // <- adiciona
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// Permite upload de PDFs de até 20 MB via multipart/form-data
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 20 * 1024 * 1024; // 20 MB
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>

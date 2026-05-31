@@ -98,3 +98,7 @@ C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\D
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\Debug\net10.0\apiSistemaVacuo.pdb
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\Debug\net10.0\apiSistemaVacuo.genruntimeconfig.cache
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\Debug\net10.0\ref\apiSistemaVacuo.dll
+C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\Debug\net10.0\apiSistemaVacuo.sourcelink.json
+C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.Core.dll
+C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.Extensions.NETCore.Setup.dll
+C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.S3.dll
