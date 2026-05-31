@@ -1155,6 +1155,31 @@ function desenharGraficoPDF(doc, x, y, w, h, labels, values, yMin, yMax, titulo,
 }
 
 // =============================================
+//  HELPER: enviar PDF gerado para a API → S3
+// =============================================
+async function enviarPDFParaAPI(doc, filename) {
+    try {
+        const pdfBlob = doc.output('blob');
+        const formData = new FormData();
+        formData.append('file', pdfBlob, filename);
+
+        const response = await fetch(`${API_URL}/relatorios/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('PDF enviado para S3:', data.url || filename);
+        } else {
+            console.warn('Falha ao enviar PDF para API:', response.status, response.statusText);
+        }
+    } catch (err) {
+        console.warn('Erro ao enviar PDF para API (upload ignorado):', err.message);
+    }
+}
+
+// =============================================
 //  RELATÓRIO PDF
 // =============================================
 async function gerarRelatorioPDF(isEmergencia = false, snapshotDados = null) {
@@ -1278,6 +1303,7 @@ async function gerarRelatorioPDF(isEmergencia = false, snapshotDados = null) {
     const filename = `${tipo}_${cicloAtualId - 1}_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(filename);
     console.log('PDF gerado:', filename);
+    await enviarPDFParaAPI(doc, filename);
 }
 
 // =============================================
@@ -1376,6 +1402,7 @@ async function gerarRelatorioMensal() {
     const filename = `relatorio_mensal_${ano}_${String(mes).padStart(2, '0')}_${usuarioAtual || 'anonimo'}.pdf`;
     doc.save(filename);
     console.log('Relatorio mensal gerado:', filename, '| Ciclos:', ciclos.length);
+    await enviarPDFParaAPI(doc, filename);
 }
 
 // =============================================
