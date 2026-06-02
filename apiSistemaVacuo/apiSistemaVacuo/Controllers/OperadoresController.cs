@@ -1,4 +1,4 @@
-//OPERADORESCONTROLLER.CS
+// OPERADORESCONTROLLER.CS
 
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
@@ -27,9 +27,10 @@ namespace SistemaVacuoAPI.Controllers
                 await _connection.OpenAsync();
 
                 var cmd = new MySqlCommand(
-                    "SELECT id, nome, identificador FROM operadores WHERE identificador = @id LIMIT 1",
+                    "SELECT id, nome, identificador, papel FROM operadores WHERE UPPER(identificador) = @id LIMIT 1",
                     _connection);
 
+                // Busca sempre em uppercase — funciona independente de como está no banco
                 cmd.Parameters.AddWithValue("@id", identificador.ToUpper());
                 var reader = await cmd.ExecuteReaderAsync();
 
@@ -37,9 +38,10 @@ namespace SistemaVacuoAPI.Controllers
                 {
                     return Ok(new
                     {
-                        id = reader["id"],
-                        nome = reader["nome"],
-                        identificador = reader["identificador"]
+                        id       = reader["id"],
+                        nome     = reader["nome"],
+                        identificador = reader["identificador"],
+                        papel    = reader["papel"]
                     });
                 }
 
