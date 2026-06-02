@@ -1336,3 +1336,384 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   TELA DO OPERADOR
+   ========================================================================== */
+
+#telaOperador {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+#dashboardPrincipal {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+    #dashboardPrincipal.hidden,
+    #telaOperador.hidden {
+        display: none !important;
+    }
+
+/* Banner emergência operador */
+.op-emergency-banner {
+    background: rgba(226,6,19,0.12);
+    border: 1px solid var(--accent-border);
+    border-left: 4px solid var(--accent);
+    color: #ff7070;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+    .op-emergency-banner.hidden {
+        display: none;
+    }
+
+@keyframes pulse-border {
+    0%, 100% {
+        border-left-color: var(--accent);
+    }
+
+    50% {
+        border-left-color: transparent;
+    }
+}
+
+/* Grid de cards do operador */
+.op-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+}
+
+.op-card {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Card de status ocupa a primeira coluna completa */
+.op-card-status {
+    grid-column: 1;
+    grid-row: 1;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border-left: 3px solid var(--border-mid);
+}
+
+/* Gráfico ocupa a linha inteira embaixo */
+.op-card-chart {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 0;
+}
+
+.op-chart-container {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    height: 220px;
+}
+
+.op-status-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    color: var(--text-primary);
+}
+
+.op-status-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+    .op-status-value.operando {
+        color: var(--green);
+    }
+
+    .op-status-value.emergencia {
+        color: var(--accent);
+        animation: blink 1s step-end infinite;
+    }
+
+    .op-status-value.aguardando {
+        color: var(--text-muted);
+    }
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.op-metric-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+}
+
+.op-metric-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   CORREÇÕES MODO CLARO — elementos faltando contraste
+   ========================================================================== */
+
+[data-theme="light"] .top-info {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .usuario-badge {
+    background-color: rgba(208,0,10,0.06);
+    border-color: var(--border-mid);
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .header-panel {
+    background-color: var(--bg-panel);
+    border-color: var(--border-subtle);
+}
+
+[data-theme="light"] .header-title {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .tab-button {
+    color: var(--text-secondary);
+    background-color: transparent;
+}
+
+    [data-theme="light"] .tab-button:hover {
+        color: var(--text-primary);
+        background-color: var(--bg-surface);
+    }
+
+    [data-theme="light"] .tab-button.active {
+        color: var(--text-primary);
+        background-color: var(--bg-panel);
+        border-bottom-color: var(--accent);
+    }
+
+[data-theme="light"] .tabs-nav {
+    border-bottom-color: var(--border-mid);
+    background-color: var(--bg-surface);
+}
+
+[data-theme="light"] .section-title {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .status-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .info-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .divider {
+    border-top-color: var(--border-mid);
+}
+
+[data-theme="light"] .gauge-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .chart-title {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .timer-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .timer-value {
+    color: var(--timer-color);
+}
+
+/* Modais no claro */
+[data-theme="light"] .modal-overlay {
+    background-color: rgba(200,195,190,0.80);
+}
+
+[data-theme="light"] .modal-content,
+[data-theme="light"] .modal-confirm {
+    background-color: var(--bg-panel);
+    border-color: var(--border-mid);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+
+    [data-theme="light"] .modal-content h2,
+    [data-theme="light"] .modal-confirm h3 {
+        color: var(--text-primary);
+    }
+
+    [data-theme="light"] .modal-content p,
+    [data-theme="light"] .modal-confirm p {
+        color: var(--text-secondary);
+    }
+
+[data-theme="light"] .modal-confirm-icon {
+    border-color: var(--border-mid);
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] #inputId {
+    background-color: var(--bg-inset);
+    border-color: var(--border-subtle);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .btn-confirm-cancel {
+    background-color: var(--bg-surface);
+    border-color: var(--border-mid);
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .btn-confirm-ok {
+    background-color: rgba(208,0,10,0.08);
+    border-color: var(--accent-border);
+    color: var(--accent);
+}
+
+    [data-theme="light"] .btn-confirm-ok:hover {
+        background-color: var(--accent);
+        color: #fff;
+    }
+
+[data-theme="light"] .btn-confirm-start {
+    background-color: rgba(26,110,42,0.10);
+    border-color: var(--green-border);
+    color: var(--green);
+}
+
+    [data-theme="light"] .btn-confirm-start:hover {
+        background-color: var(--green);
+        color: #fff;
+    }
+
+/* Drum picker no claro */
+[data-theme="light"] .drum-wrapper {
+    background-color: var(--bg-inset);
+    border-color: var(--border-mid);
+}
+
+[data-theme="light"] .drum-item {
+    color: var(--text-muted);
+}
+
+    [data-theme="light"] .drum-item.selected {
+        color: var(--text-primary);
+    }
+
+[data-theme="light"] .drum-fade-top,
+[data-theme="light"] .drum-fade-bot {
+    background: linear-gradient(to bottom, var(--bg-inset), transparent);
+}
+
+[data-theme="light"] .drum-fade-bot {
+    background: linear-gradient(to top, var(--bg-inset), transparent);
+}
+
+[data-theme="light"] .drum-highlight {
+    border-color: var(--border-mid);
+}
+
+/* Válvulas no claro — SVG inline usa var() direto */
+[data-theme="light"] .valve-visual svg rect,
+[data-theme="light"] .valve-visual svg circle {
+    stroke: var(--text-muted);
+}
+
+[data-theme="light"] .valve-visual svg line {
+    stroke: var(--text-muted);
+}
+
+[data-theme="light"] .valve-visual svg text {
+    fill: var(--text-primary);
+}
+
+[data-theme="light"] .valve-panel {
+    background-color: var(--bg-panel);
+}
+
+[data-theme="light"] .valve-header h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .valve-info p span {
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .servo-button {
+    background-color: var(--bg-surface);
+    border-color: var(--border-mid);
+    color: var(--text-primary);
+}
+
+    [data-theme="light"] .servo-button:hover {
+        background-color: var(--bg-inset);
+    }
+
+/* Óleo no claro */
+[data-theme="light"] .tank {
+    border-color: var(--border-mid);
+    background-color: var(--bg-inset);
+}
+
+[data-theme="light"] #oilPercent {
+    color: var(--text-secondary);
+}
+
+/* Charts — grid lines */
+[data-theme="light"] canvas {
+    filter: none;
+}
+
+/* Tela operador no claro */
+[data-theme="light"] .op-metric-value {
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .op-status-badge {
+    background-color: var(--bg-surface);
+    border-color: var(--border-mid);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .op-emergency-banner {
+    background: rgba(208,0,10,0.07);
+    color: #cc0000;
+}

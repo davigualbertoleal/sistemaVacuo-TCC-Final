@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSEA Energy — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="login_style.css">
+</head>
+<body>
+
+    <div class="login-wrapper">
+
+        <div class="login-card">
+
+            <div class="login-logo">TSEA ENERGY</div>
+            <div class="login-system">CONTROLE DE VÁCUO</div>
+
+            <div class="login-divider"></div>
+
+            <label class="login-label">IDENTIFICADOR DE FUNCIONÁRIO</label>
+            <input type="text" id="inputId" placeholder="OP-001" maxlength="20" autocomplete="off" spellcheck="false">
+
+            <button id="btnConfirmar" class="btn-login">ENTRAR</button>
+
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="login-footer">
+                Sistema de controle de processo a vácuo<br>
+                Acesso restrito a funcionários autorizados
+            </div>
+
+        </div>
+
+    </div>
+
+    <label class="theme-toggle" id="themeToggle">
+        <span id="themeLabel">ESCURO</span>
+        <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
+    </label>
+
+    <script src="login_script.js"></script>
+</body>
+</html>
