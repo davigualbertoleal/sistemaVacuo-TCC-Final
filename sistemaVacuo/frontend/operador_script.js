@@ -1,13 +1,11 @@
 // =============================================
 //  SCRIPT OPERADOR - Sistema de Vacuo (TSEA ENERGY)
-//  Operador pode: conectar tubos, abrir/fechar válvulas,
-//  iniciar/parar processo e acionar emergência.
-//  Conversão: PA → mBar (1 Pa = 0.01 mBar)
 // =============================================
 
 const API_URL = "http://localhost:5000/api";
 
 let usuarioAtual = null;
+let cicloAtualId = 1;
 let timerInterval = null;
 let tempoDecorrido = 0;
 let tempoLimite = 0;
@@ -15,18 +13,12 @@ let processoEmAndamento = false;
 let dashboardCarregado = false;
 let modoEmergencia = false;
 
-// Óleo
 let intervaloOleo = null;
 let nivelCheio = false;
 let tempCoolingStarted = false;
 
-let dadosOleo = {
-    pressao: 0,
-    temperatura: 60,
-    nivel: 0
-};
+let dadosOleo = { pressao: 0, temperatura: 60, nivel: 0 };
 
-// Tubos e servos (operador controla agora)
 const mangueiras = { 1: false, 2: false, 3: false };
 const servos = { 1: 155, 2: 155, 3: 155 };
 
@@ -39,11 +31,9 @@ const SENSOR_MBAR_MIN = -150;
 const SENSOR_MBAR_MAX = 10;
 
 // =============================================
-//  CONVERSÃO PA → mBar
+//  CONVERSAO PA -> mBar
 // =============================================
-function paParaMbar(pa) {
-    return pa * 0.01;
-}
+function paParaMbar(pa) { return pa * 0.01; }
 
 // =============================================
 //  STORAGE SEGURO
@@ -53,7 +43,7 @@ function storageSet(k, v) { try { localStorage.setItem(k, v); } catch { memStora
 function storageGet(k) { try { const v = localStorage.getItem(k); if (v !== null) return v; } catch { } return memStorage[k] ?? null; }
 
 // =============================================
-//  INICIALIZAÇÃO
+//  INICIALIZACAO
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
     aplicarTema(storageGet('tema') || 'dark');
@@ -99,7 +89,7 @@ function esperarChartJS(cb) {
 }
 
 // =============================================
-//  INTEGRAÇÃO WEBVIEW2
+//  INTEGRACAO WEBVIEW2
 // =============================================
 window.addEventListener('load', () => {
     if (window.chrome?.webview)
@@ -144,7 +134,7 @@ function mostrarDadosIniciais() {
         if (el) el.textContent = '--';
     });
     const faseEl = document.getElementById('faseDisplay');
-    if (faseEl) { faseEl.textContent = 'AGUARDANDO INÍCIO'; faseEl.className = 'fase-badge aguard'; }
+    if (faseEl) { faseEl.textContent = 'AGUARDANDO INICIO'; faseEl.className = 'fase-badge aguard'; }
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) timerEl.textContent = '00:00:00';
     const limEl = document.getElementById('timerLimit');
@@ -169,7 +159,7 @@ function configurarAbas() {
 }
 
 // =============================================
-//  MANGUEIRAS (tubos)
+//  MANGUEIRAS
 // =============================================
 function configurarMangueiras() {
     document.querySelectorAll('.mangueira-button').forEach(btn => {
@@ -187,7 +177,7 @@ function configurarMangueiras() {
 function validarMangueiras() { validarBotaoIniciar(); }
 
 // =============================================
-//  SERVOS (válvulas) — operador controla
+//  SERVOS
 // =============================================
 function configurarServos() {
     document.querySelectorAll('.servo-button').forEach(btn => {
@@ -200,9 +190,6 @@ function configurarServos() {
     });
 }
 
-// =============================================
-//  BOTÃO INICIAR — valida tubo + válvula aberta
-// =============================================
 function validarBotaoIniciar() {
     if (modoEmergencia) return;
     const btnIniciar = document.getElementById('btnIniciar');
@@ -213,7 +200,7 @@ function validarBotaoIniciar() {
 }
 
 // =============================================
-//  BOTÕES
+//  BOTOES
 // =============================================
 function configurarBotoes() {
     document.getElementById('btnIniciar')?.addEventListener('click', abrirModalTimer);
@@ -226,7 +213,6 @@ function configurarBotoes() {
         document.getElementById('modalFechar')?.classList.add('hidden')
     );
     document.getElementById('btnConfirmarFechar')?.addEventListener('click', fazerLogout);
-
     document.getElementById('btnCancelarTimer')?.addEventListener('click', fecharModalTimer);
     document.getElementById('btnConfirmarTimer')?.addEventListener('click', confirmarTimer);
     document.getElementById('btnFecharTempoEncerrado')?.addEventListener('click', () =>
@@ -335,14 +321,8 @@ function confirmarTimer() {
 //  PROCESSO E TIMER
 // =============================================
 function iniciarProcesso() {
-    if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) {
-        alert('Conecte pelo menos 1 tubo para iniciar!');
-        return;
-    }
-    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) {
-        alert('Abra pelo menos 1 válvula para iniciar!');
-        return;
-    }
+    if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) { alert('Conecte pelo menos 1 tubo para iniciar!'); return; }
+    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) { alert('Abra pelo menos 1 valvula para iniciar!'); return; }
 
     processoEmAndamento = true;
     tempoDecorrido = 0;
@@ -356,7 +336,6 @@ function iniciarProcesso() {
     const btnI = document.getElementById('btnIniciar');
     if (btnI) btnI.disabled = true;
 
-    // Bloqueia tubos e válvulas durante o processo
     document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = '0.5';
@@ -375,11 +354,7 @@ function iniciarProcesso() {
         timerEl.textContent = `${lh}:${lm}:${ls}`;
     }
 
-    if (window.vacuoChart) {
-        window.vacuoChart.data.labels = [];
-        window.vacuoChart.data.datasets[0].data = [];
-        window.vacuoChart.update();
-    }
+    if (window.vacuoChart) { window.vacuoChart.data.labels = []; window.vacuoChart.data.datasets[0].data = []; window.vacuoChart.update(); }
 
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -397,18 +372,17 @@ function iniciarProcesso() {
             const sEl = document.getElementById('status-estado');
             if (sEl) { sEl.textContent = 'CONCLUIDO'; sEl.className = 'status-value on'; }
             document.getElementById('timerLimit').textContent = 'TEMPO ENCERRADO';
+            gerarRelatorioPDF(false);
             document.getElementById('modalTempoEncerrado')?.classList.remove('hidden');
         }
     }, 1000);
 
-    // Polling da API durante o processo
     if (window.apiInterval) clearInterval(window.apiInterval);
     window.apiInterval = setInterval(buscarDados, 2000);
     buscarDados();
 
     iniciarSimulacaoOleo();
 
-    // Habilita emergência
     const btnE = document.getElementById('btnEmergencia');
     if (btnE) { btnE.disabled = false; btnE.style.opacity = ''; }
 
@@ -424,7 +398,6 @@ function pararProcesso() {
     const btnI = document.getElementById('btnIniciar');
     if (btnI) btnI.disabled = false;
 
-    // Reabilita tubos e válvulas após processo
     if (!modoEmergencia) {
         document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
             btn.disabled = false;
@@ -442,9 +415,9 @@ function pararProcesso() {
 }
 
 // =============================================
-//  EMERGÊNCIA — operador só ATIVA, não desativa
+//  EMERGENCIA — operador so ATIVA, nao desativa
 // =============================================
-function acionarEmergencia() {
+async function acionarEmergencia() {
     if (modoEmergencia) {
         document.getElementById('modalEmergAtivada')?.classList.remove('hidden');
         return;
@@ -455,17 +428,18 @@ function acionarEmergencia() {
     pararProcesso();
     pararSimulacaoOleo();
 
+    // Gera e envia o PDF de emergencia para o S3
+    await gerarRelatorioPDF(true);
+
     const stEl = document.getElementById('status-estado');
-    if (stEl) { stEl.textContent = 'EMERGÊNCIA'; stEl.className = 'status-value off'; }
+    if (stEl) { stEl.textContent = 'EMERGENCIA'; stEl.className = 'status-value off'; }
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) timerEl.textContent = '--:--:--';
     const limEl = document.getElementById('timerLimit');
-    if (limEl) limEl.textContent = 'PARADO — EMERGÊNCIA';
+    if (limEl) limEl.textContent = 'PARADO — EMERGENCIA';
 
-    // Fecha todas as válvulas
     [1, 2, 3].forEach(n => { servos[n] = 155; atualizarValvulaVisual(n, 155); });
 
-    // Bloqueia toda a interface
     document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = '0.3';
@@ -473,10 +447,10 @@ function acionarEmergencia() {
     });
 
     const faseEl = document.getElementById('faseDisplay');
-    if (faseEl) { faseEl.textContent = 'EMERGÊNCIA — AGUARDANDO LIBERAÇÃO'; faseEl.className = 'fase-badge estavel'; }
+    if (faseEl) { faseEl.textContent = 'EMERGENCIA — AGUARDANDO LIBERACAO'; faseEl.className = 'fase-badge estavel'; }
 
     const btnE = document.getElementById('btnEmergencia');
-    if (btnE) { btnE.textContent = 'AGUARDANDO LIBERAÇÃO...'; btnE.className = 'btn btn-emergency-aguardando'; btnE.disabled = false; btnE.style.opacity = ''; }
+    if (btnE) { btnE.textContent = 'AGUARDANDO LIBERACAO...'; btnE.className = 'btn btn-emergency-aguardando'; btnE.disabled = false; btnE.style.opacity = ''; }
 
     enviarEmergenciaAPI();
     document.getElementById('modalEmergAtivada')?.classList.remove('hidden');
@@ -494,13 +468,11 @@ async function enviarEmergenciaAPI() {
 }
 
 // =============================================
-//  VÁLVULAS — operador controla
+//  VALVULAS
 // =============================================
 function atualizarStatusValvulas() {
     [1, 2, 3].forEach(n => atualizarValvulaVisual(n, servos[n]));
     validarBotaoIniciar();
-
-    // Emergência começa desabilitada
     const btnE = document.getElementById('btnEmergencia');
     if (btnE) { btnE.disabled = true; btnE.style.opacity = '0.4'; }
 }
@@ -524,7 +496,7 @@ function atualizarValvulaVisual(num, angulo) {
             svg.querySelectorAll('rect, line').forEach(el => el.style.stroke = corHex);
             svg.querySelectorAll('text').forEach(el => el.style.fill = corHex);
             const angleEl = svg.querySelector(`#valveAngle${num}`);
-            if (angleEl) angleEl.textContent = angulo + '°';
+            if (angleEl) angleEl.textContent = angulo + 'deg';
             const indEl = svg.querySelector(`#valveIndicator${num}`);
             if (indEl) indEl.style.transform = `rotate(${angulo}deg)`;
         }
@@ -534,7 +506,7 @@ function atualizarValvulaVisual(num, angulo) {
     if (btn) btn.textContent = isAberta ? 'ABERTA' : 'FECHADA';
 
     const angleTxt = document.getElementById(`valveAngleTxt${num}`);
-    if (angleTxt) angleTxt.textContent = angulo + '°';
+    if (angleTxt) angleTxt.textContent = angulo + 'deg';
 
     validarBotaoIniciar();
 }
@@ -549,7 +521,7 @@ function atualizarValvulasDados(d) {
 }
 
 // =============================================
-//  GRÁFICO VÁCUO
+//  GRAFICO VACUO
 // =============================================
 function inicializarGrafico() {
     try {
@@ -559,14 +531,14 @@ function inicializarGrafico() {
         const tema = document.documentElement.getAttribute('data-theme') || 'dark';
         window.vacuoChart = new Chart(ctx, {
             type: 'line',
-            data: { labels: [], datasets: [{ label: 'Pressão (mBar)', data: [], borderColor: tema === 'dark' ? '#c8c8d4' : '#3a3730', borderWidth: 2, tension: 0.4, pointRadius: 0, backgroundColor: 'rgba(200,200,212,0.06)', fill: true }] },
+            data: { labels: [], datasets: [{ label: 'Pressao (mBar)', data: [], borderColor: tema === 'dark' ? '#c8c8d4' : '#3a3730', borderWidth: 2, tension: 0.4, pointRadius: 0, backgroundColor: 'rgba(200,200,212,0.06)', fill: true }] },
             options: { responsive: true, maintainAspectRatio: false, animation: { duration: 200 }, plugins: { legend: { display: false } }, scales: { y: { min: SENSOR_MBAR_MIN, max: SENSOR_MBAR_MAX, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { size: 9, family: 'IBM Plex Mono' } } }, x: { grid: { display: false }, ticks: { color: '#666', font: { size: 9 }, maxTicksLimit: 6 } } } }
         });
     } catch (e) { console.warn('Grafico vacuo:', e.message); }
 }
 
 // =============================================
-//  GRÁFICO ÓLEO
+//  GRAFICO OLEO
 // =============================================
 function inicializarGraficoOleo() {
     try {
@@ -639,9 +611,9 @@ function atualizarPrincipal(d) {
     const faseEl = document.getElementById('faseDisplay');
     if (faseEl && !modoEmergencia) {
         let texto, cls;
-        if (p < -600) { texto = 'SUCÇÃO ATIVA'; cls = 'succao'; }
-        else if (p <= -200) { texto = 'PRESSÃO ESTÁVEL'; cls = 'estavel'; }
-        else { texto = 'PRESSÃO BAIXA'; cls = 'aguard'; }
+        if (p < -600) { texto = 'SUCCAO ATIVA'; cls = 'succao'; }
+        else if (p <= -200) { texto = 'PRESSAO ESTAVEL'; cls = 'estavel'; }
+        else { texto = 'PRESSAO BAIXA'; cls = 'aguard'; }
         faseEl.textContent = texto;
         faseEl.className = 'fase-badge ' + cls;
     }
@@ -661,7 +633,7 @@ function atualizarPrincipal(d) {
 }
 
 // =============================================
-//  SIMULAÇÃO ÓLEO
+//  SIMULACAO OLEO
 // =============================================
 function iniciarSimulacaoOleo() {
     if (intervaloOleo) clearInterval(intervaloOleo);
@@ -716,7 +688,7 @@ function pararSimulacaoOleo() {
 }
 
 // =============================================
-//  ATUALIZAR UI ÓLEO
+//  ATUALIZAR UI OLEO
 // =============================================
 function atualizarOleoUI() {
     if (!processoEmAndamento) return;
@@ -742,7 +714,7 @@ function atualizarOleoUI() {
     const r = Math.round(107 + (189 - 107) * tempRatio);
     if (oilFill) oilFill.style.background = `linear-gradient(to top, rgb(${Math.max(60, r - 30)},2,2), rgb(${Math.min(255, r + 30)},2,2))`;
 
-    const filtroEstado = nivel < 30 ? 'CRÍTICO' : nivel < 60 ? 'ATENÇÃO' : 'NORMAL';
+    const filtroEstado = nivel < 30 ? 'CRITICO' : nivel < 60 ? 'ATENCAO' : 'NORMAL';
     const filtroClasse = nivel < 30 ? 'crit' : nivel < 60 ? 'warn' : 'ok';
     const semaF = document.getElementById('semaFiltro');
     if (semaF) { semaF.className = `op-sema-item ${filtroClasse}`; const t = document.getElementById('semaFiltroTxt'); if (t) t.textContent = filtroEstado; }
@@ -752,7 +724,7 @@ function atualizarOleoUI() {
     const semaC = document.getElementById('semaCirculacao');
     if (semaC) { semaC.className = `op-sema-item ${circClasse}`; const t = document.getElementById('semaCirculacaoTxt'); if (t) t.textContent = circEstado; }
 
-    const estEstado = modoEmergencia ? 'EMERGÊNCIA' : nivel >= 100 ? 'CONCLUÍDO' : 'OPERANDO';
+    const estEstado = modoEmergencia ? 'EMERGENCIA' : nivel >= 100 ? 'CONCLUIDO' : 'OPERANDO';
     const estClasse = modoEmergencia ? 'crit' : 'ok';
     const semaE = document.getElementById('semaEstado');
     if (semaE) { semaE.className = `op-sema-item ${estClasse}`; const t = document.getElementById('semaEstadoTxt'); if (t) t.textContent = estEstado; }
@@ -775,7 +747,148 @@ function atualizarOleoUI() {
 }
 
 // =============================================
-//  RELÓGIO
+//  HISTORICO
+// =============================================
+function salvarCicloNoHistorico(isEmergencia) {
+    const agora = new Date();
+    const chave = `ciclos_vacuo_${agora.getFullYear()}_${String(agora.getMonth() + 1).padStart(2, '0')}`;
+    let ciclos = [];
+    try { ciclos = JSON.parse(storageGet(chave) || '[]'); } catch { }
+
+    const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
+    const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
+    const ls = (tempoLimite % 60).toString().padStart(2, '0');
+
+    ciclos.push({
+        id: cicloAtualId, emergencia: isEmergencia,
+        operador: usuarioAtual || 'Nao identificado',
+        dataHora: agora.toLocaleString('pt-BR'),
+        tempoOperacao: `${lh}:${lm}:${ls}`,
+        pressaoCamara: dadosAtual ? dadosAtual.pressaoCamaraMbar.toFixed(2) : '--',
+        pressaoT1: dadosAtual ? dadosAtual.pressaoTubo1Mbar.toFixed(2) : '--',
+        fluxoT1: dadosAtual ? dadosAtual.fluxoTubo1LPM.toFixed(1) : '--',
+        pressaoT2: dadosAtual ? dadosAtual.pressaoTubo2Mbar.toFixed(2) : '--',
+        fluxoT2: dadosAtual ? dadosAtual.fluxoTubo2LPM.toFixed(1) : '--',
+        pressaoT3: dadosAtual ? dadosAtual.pressaoTubo3Mbar.toFixed(2) : '--',
+        fluxoT3: dadosAtual ? dadosAtual.fluxoTubo3LPM.toFixed(1) : '--',
+        temperatura: dadosAtual ? dadosAtual.temperaturaOleo?.toFixed(1) : dadosOleo.temperatura.toFixed(1),
+        tubo1: mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO',
+        tubo2: mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO',
+        tubo3: mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO',
+        servo: dadosAtual ? dadosAtual.servoAngulo + ' graus' : '--'
+    });
+
+    storageSet(chave, JSON.stringify(ciclos));
+    cicloAtualId++;
+}
+
+// =============================================
+//  HELPER: GRAFICO NO PDF
+// =============================================
+function desenharGraficoPDF(doc, x, y, w, h, labels, values, yMin, yMax, titulo, corLinha) {
+    corLinha = corLinha || [50, 80, 180];
+    doc.setFillColor(248, 248, 248); doc.rect(x, y, w, h, 'F');
+    doc.setDrawColor(210, 210, 210); doc.rect(x, y, w, h);
+    doc.setFontSize(7); doc.setTextColor(90, 90, 90); doc.text(titulo, x + 2, y + 5);
+    if (!values || values.length < 2) { doc.setFontSize(7); doc.setTextColor(150); doc.text('Sem dados registrados', x + w / 2, y + h / 2, { align: 'center' }); return; }
+    const padL = 8, padR = 4, padT = 9, padB = 9, gW = w - padL - padR, gH = h - padT - padB, range = yMax - yMin || 1;
+    doc.setDrawColor(225, 225, 225); doc.setLineWidth(0.15);
+    for (let i = 0; i <= 3; i++) { const gy = y + padT + (i / 3) * gH; doc.line(x + padL, gy, x + padL + gW, gy); doc.setFontSize(5); doc.setTextColor(150); doc.text((yMax - (i / 3) * range).toFixed(0), x + padL - 1, gy + 1, { align: 'right' }); }
+    doc.setDrawColor(...corLinha); doc.setLineWidth(0.5);
+    const pts = values.map((v, i) => ({ px: x + padL + (i / (values.length - 1)) * gW, py: y + padT + gH - ((Math.min(Math.max(v, yMin), yMax) - yMin) / range) * gH }));
+    for (let i = 1; i < pts.length; i++) doc.line(pts[i - 1].px, pts[i - 1].py, pts[i].px, pts[i].py);
+    doc.setFontSize(5); doc.setTextColor(130);
+    [0, Math.floor((values.length - 1) / 2), values.length - 1].forEach(idx => { if (labels[idx]) { const px = x + padL + (idx / (values.length - 1)) * gW; doc.text(labels[idx], px, y + padT + gH + 5, { align: 'center' }); } });
+}
+
+// =============================================
+//  HELPER: ENVIAR PDF PARA API
+// =============================================
+async function enviarPDFParaAPI(doc, filename) {
+    try {
+        const pdfBlob = doc.output('blob');
+        const formData = new FormData();
+        formData.append('file', pdfBlob, filename);
+        const response = await fetch(`${API_URL}/relatorios/upload`, { method: 'POST', body: formData });
+        if (response.ok) { const data = await response.json(); console.log('PDF enviado para S3:', filename); }
+        else console.warn('Falha ao enviar PDF:', response.status);
+    } catch (err) { console.warn('Erro ao enviar PDF (ignorado):', err.message); }
+}
+
+// =============================================
+//  RELATORIO PDF
+// =============================================
+async function gerarRelatorioPDF(isEmergencia) {
+    if (!window.jspdf) { console.warn('jsPDF nao carregou.'); return; }
+    salvarCicloNoHistorico(isEmergencia);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const corHeader = isEmergencia ? [160, 10, 10] : [18, 18, 20];
+    doc.setFillColor(...corHeader); doc.rect(0, 0, 210, 44, 'F');
+    doc.setTextColor(232, 232, 232); doc.setFontSize(isEmergencia ? 16 : 17);
+    if (isEmergencia) {
+        doc.setFont(undefined, 'bold'); doc.text('*** RELATORIO DE EMERGENCIA ***', 105, 13, { align: 'center' });
+        doc.setFont(undefined, 'normal'); doc.text('SISTEMA DE VACUO - TSEA ENERGY', 105, 22, { align: 'center' });
+    } else {
+        doc.text('RELATORIO - SISTEMA DE VACUO', 105, 14, { align: 'center' });
+        doc.setFontSize(10); doc.setTextColor(170, 170, 170); doc.text('TSEA Energy', 105, 24, { align: 'center' });
+    }
+    doc.setFontSize(10); doc.setTextColor(170, 170, 170);
+    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 105, isEmergencia ? 30 : 31, { align: 'center' });
+    if (isEmergencia) { doc.setTextColor(255, 180, 180); doc.text('PROCESSO INTERROMPIDO POR EMERGENCIA', 105, 38, { align: 'center' }); }
+
+    let y = 54;
+    doc.setTextColor(0, 0, 0);
+
+    const lh = Math.floor(tempoLimite / 3600).toString().padStart(2, '0');
+    const lm = Math.floor((tempoLimite % 3600) / 60).toString().padStart(2, '0');
+    const ls = (tempoLimite % 60).toString().padStart(2, '0');
+
+    doc.setFontSize(12); doc.text('DADOS DO CICLO', 20, y); y += 10; doc.setFontSize(10);
+    doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, y); y += 7;
+    doc.text(`Ciclo ID: ${cicloAtualId - 1}`, 20, y); y += 7;
+    doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 20, y); y += 7;
+    doc.text(`Tempo de Operacao: ${lh}:${lm}:${ls}`, 20, y); y += 7;
+    if (isEmergencia) { doc.setFont(undefined, 'bold'); doc.setTextColor(150, 0, 0); doc.text('Motivo de encerramento: EMERGENCIA', 20, y); doc.setFont(undefined, 'normal'); doc.setTextColor(0, 0, 0); }
+    y += 12;
+
+    doc.setFontSize(12); doc.text('PRESSOES E FLUXOS', 20, y); y += 10; doc.setFontSize(10);
+    if (dadosAtual) {
+        doc.text(`Camara: ${dadosAtual.pressaoCamaraMbar.toFixed(2)} mBar`, 20, y); y += 7;
+        doc.text(`Tubo 1: ${dadosAtual.pressaoTubo1Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo1LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Tubo 2: ${dadosAtual.pressaoTubo2Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo2LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Tubo 3: ${dadosAtual.pressaoTubo3Mbar.toFixed(2)} mBar  |  Fluxo: ${dadosAtual.fluxoTubo3LPM.toFixed(1)} LPM`, 20, y); y += 7;
+        doc.text(`Temperatura Oleo: ${dadosAtual.temperaturaOleo ? dadosAtual.temperaturaOleo.toFixed(1) : dadosOleo.temperatura.toFixed(1)} C`, 20, y); y += 7;
+    } else { doc.text('Nenhum dado disponivel.', 20, y); y += 7; }
+    y += 5;
+
+    doc.setFontSize(12); doc.text('STATUS DOS COMPONENTES', 20, y); y += 10; doc.setFontSize(10);
+    doc.text(`Tubo 1: ${mangueiras[1] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 7;
+    doc.text(`Tubo 2: ${mangueiras[2] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 7;
+    doc.text(`Tubo 3: ${mangueiras[3] ? 'CONECTADO' : 'DESCONECTADO'}`, 20, y); y += 14;
+
+    doc.setFontSize(12); doc.text('GRAFICOS DO CICLO', 20, y); y += 8;
+    if (y + 55 > 270) { doc.addPage(); y = 20; }
+    desenharGraficoPDF(doc, 15, y, 180, 50, historicoVacuo.labels, historicoVacuo.values, SENSOR_MBAR_MIN, SENSOR_MBAR_MAX, 'Pressao Camara (mBar)', [50, 80, 180]); y += 58;
+    if (y + 55 > 270) { doc.addPage(); y = 20; }
+    const oleoLabels = window.oleoChart ? window.oleoChart.data.labels : [];
+    const oleoValues = window.oleoChart ? window.oleoChart.data.datasets[0].data : [];
+    desenharGraficoPDF(doc, 15, y, 87, 50, oleoLabels, oleoValues, 0, 10, 'Pressao Oleo (Bar)', [189, 2, 2]);
+    desenharGraficoPDF(doc, 108, y, 87, 50, historicoTemp.labels, historicoTemp.values, 20, 65, 'Temperatura Oleo (C)', [200, 120, 0]);
+
+    doc.setTextColor(100, 100, 100); doc.setFontSize(8);
+    doc.text('Relatorio gerado automaticamente - TSEA Energy', 105, 285, { align: 'center' });
+
+    const tipo = isEmergencia ? 'EMERGENCIA' : 'ciclo';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `${tipo}_${usuarioAtual || 'anonimo'}_${timestamp}.pdf`;
+    doc.save(filename);
+    await enviarPDFParaAPI(doc, filename);
+}
+
+// =============================================
+//  RELOGIO
 // =============================================
 function atualizarRelogio() {
     const agora = new Date();

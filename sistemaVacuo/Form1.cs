@@ -210,7 +210,7 @@ namespace sistemaVacuo
                         "INSERT INTO ciclosProcesso (operadorResponsavelId, status) VALUES (NULL, 'Em Andamento')", conn);
                     cmd.ExecuteNonQuery();
                     cmd.CommandText = "SELECT LAST_INSERT_ID()";
-                    cicloAtualId = (int)(long)cmd.ExecuteScalar();
+                    cicloAtualId = Convert.ToInt32(cmd.ExecuteScalar());
                 }
             }
             catch (Exception ex) { MessageBox.Show($"Erro ao iniciar ciclo: {ex.Message}"); }
