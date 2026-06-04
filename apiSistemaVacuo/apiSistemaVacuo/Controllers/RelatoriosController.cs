@@ -35,21 +35,28 @@ namespace SistemaVacuoAPI.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest(new { error = "Nenhum arquivo recebido." });
 
-            if (!file.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
-                && !file.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            // FIX: jsPDF pode enviar blob com ContentType vazio ou "application/octet-stream".
+            // Aceita qualquer ContentType desde que o filename termine com .pdf.
+            if (!file.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 return BadRequest(new { error = "Apenas arquivos PDF são aceitos." });
 
             var bucketName = _config["AWS:BucketName"];
             if (string.IsNullOrWhiteSpace(bucketName))
                 return StatusCode(500, new { error = "BucketName não configurado em appsettings.json." });
 
-            // Organiza no bucket por ano/mês para facilitar listagem futura
-            var keyPrefix = $"relatorios/{DateTime.UtcNow:yyyy/MM}";
-            var key = $"{keyPrefix}/{file.FileName}";
+            var nomeLower = file.FileName.ToLower();
+            var pasta = nomeLower.StartsWith("emergencia") ? "relatorios-emergencias-processos"
+                      : nomeLower.StartsWith("relatorio_mensal") ? "relatorios-mensais-processos"
+                      : "relatorios-processos";
+
+            var key = $"{pasta}/{file.FileName}";
 
             try
             {
                 using var stream = file.OpenReadStream();
+
+                Console.WriteLine($"[UPLOAD] Arquivo: {file.FileName} | Tamanho: {file.Length}B | ContentType: {file.ContentType}");
+                Console.WriteLine($"[UPLOAD] Bucket: {bucketName} | Key: {key}");
 
                 var request = new PutObjectRequest
                 {
@@ -60,6 +67,8 @@ namespace SistemaVacuoAPI.Controllers
                 };
 
                 await _s3.PutObjectAsync(request);
+
+                Console.WriteLine($"[UPLOAD] Sucesso: {key}");
 
                 return Ok(new
                 {
@@ -73,17 +82,19 @@ namespace SistemaVacuoAPI.Controllers
             }
             catch (AmazonS3Exception ex)
             {
+                Console.WriteLine($"[UPLOAD] AmazonS3Exception: {ex.ErrorCode} | {ex.Message}");
                 return StatusCode(502, new { error = $"Erro ao enviar para o S3: {ex.Message}" });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[UPLOAD] Exception: {ex.GetType().Name} | {ex.Message}");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
 
         // =============================================
         //  GET /api/relatorios
-        //  Lista os PDFs armazenados no S3 (prefixo relatorios/)
+        //  Lista PDFs de todas as pastas do bucket
         // =============================================
         [HttpGet]
         public async Task<IActionResult> Listar([FromQuery] int limit = 50)
@@ -92,26 +103,42 @@ namespace SistemaVacuoAPI.Controllers
             if (string.IsNullOrWhiteSpace(bucketName))
                 return StatusCode(500, new { error = "BucketName não configurado em appsettings.json." });
 
+            // FIX: prefixos corretos — antes listava "relatorios/" que não existe.
+            var prefixos = new[]
+            {
+                "relatorios-processos/",
+                "relatorios-emergencias-processos/",
+                "relatorios-mensais-processos/"
+            };
+
             try
             {
-                var request = new ListObjectsV2Request
+                var todos = new List<object>();
+
+                foreach (var prefixo in prefixos)
                 {
-                    BucketName = bucketName,
-                    Prefix     = "relatorios/",
-                    MaxKeys    = limit
-                };
+                    var request = new ListObjectsV2Request
+                    {
+                        BucketName = bucketName,
+                        Prefix     = prefixo,
+                        MaxKeys    = limit
+                    };
 
-                var response = await _s3.ListObjectsV2Async(request);
+                    var response = await _s3.ListObjectsV2Async(request);
 
-                var arquivos = response.S3Objects.Select(o => new
-                {
-                    key          = o.Key,
-                    filename     = o.Key.Split('/').Last(),
-                    tamanhoKB    = Math.Round((o.Size ?? 0) / 1024.0, 1),
-                    ultimaAlteracao = o.LastModified
-                });
+                    var arquivos = response.S3Objects.Select(o => new
+                    {
+                        key             = o.Key,
+                        filename        = o.Key.Split('/').Last(),
+                        pasta           = prefixo.TrimEnd('/'),
+                        tamanhoKB       = Math.Round((o.Size ?? 0) / 1024.0, 1),
+                        ultimaAlteracao = o.LastModified
+                    });
 
-                return Ok(arquivos);
+                    todos.AddRange(arquivos);
+                }
+
+                return Ok(todos.OrderByDescending(a => ((dynamic)a).ultimaAlteracao).Take(limit));
             }
             catch (AmazonS3Exception ex)
             {

@@ -20,20 +20,15 @@ namespace SistemaVacuoAPI.Controllers
             _connection = connection;
         }
 
-        // =============================================
-        //  POST /api/servo/comando
-        //  ESP32 envia um comando ao servo e grava no banco
-        //  Body: { "angulo": 45, "cicloId": 1 }
-        // =============================================
         [HttpPost("comando")]
         public async Task<IActionResult> PostComando([FromBody] ServoComandoRequest request)
         {
             if (request == null)
                 return BadRequest(new { error = "Dados inválidos" });
 
-            // Valida intervalo de ângulo (0–90°, igual ao SERVO_MIN/MAX_ANGLE do config.h)
-            if (request.angulo < 0 || request.angulo > 90)
-                return BadRequest(new { error = "Ângulo deve estar entre 0 e 90 graus" });
+            // ✏️ Alterado: 90 → 180
+            if (request.angulo < 0 || request.angulo > 180)
+                return BadRequest(new { error = "Ângulo deve estar entre 0 e 180 graus" });
 
             try
             {
@@ -68,11 +63,6 @@ namespace SistemaVacuoAPI.Controllers
             }
         }
 
-        // =============================================
-        //  GET /api/servo/pendente
-        //  ESP32 consulta se há um comando pendente de execução
-        //  Retorna o comando mais recente ainda não executado
-        // =============================================
         [HttpGet("pendente")]
         public async Task<IActionResult> GetComandoPendente()
         {
@@ -101,7 +91,6 @@ namespace SistemaVacuoAPI.Controllers
                     });
                 }
 
-                // Sem comando pendente: ESP32 mantém posição atual
                 return NoContent();
             }
             catch (Exception ex)
@@ -114,10 +103,6 @@ namespace SistemaVacuoAPI.Controllers
             }
         }
 
-        // =============================================
-        //  PATCH /api/servo/executado/{id}
-        //  ESP32 confirma que executou o comando
-        // =============================================
         [HttpPatch("executado/{id}")]
         public async Task<IActionResult> MarcarExecutado(int id)
         {
@@ -147,10 +132,6 @@ namespace SistemaVacuoAPI.Controllers
             }
         }
 
-        // =============================================
-        //  GET /api/servo/historico?cicloId=1&limit=20
-        //  Consulta histórico de comandos do servo
-        // =============================================
         [HttpGet("historico")]
         public async Task<IActionResult> GetHistorico([FromQuery] int? cicloId = null, [FromQuery] int limit = 20)
         {
@@ -202,14 +183,12 @@ namespace SistemaVacuoAPI.Controllers
         }
     }
 
-    // =============================================
-    //  MODEL
-    // =============================================
     public class ServoComandoRequest
     {
         public int? cicloId { get; set; }
 
-        /// <summary>Ângulo desejado: 0 (fechado) a 90 (aberto). Igual a SERVO_MIN/MAX_ANGLE no config.h</summary>
+        // ✏️ Alterado: "0 a 90" → "0 a 180"
+        /// <summary>Ângulo desejado: 0 a 180. Igual a SERVO_MIN/MAX_ANGLE no config.h</summary>
         public float angulo { get; set; }
 
         /// <summary>Quem originou o comando: "API", "Manual", "Automático"</summary>

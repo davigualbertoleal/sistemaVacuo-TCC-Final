@@ -1,15 +1,16 @@
 using MySql.Data.MySqlClient;
-using Amazon.S3;  // <- adiciona
+using Amazon.S3;
+using Amazon.Runtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Permite upload de PDFs de até 20 MB via multipart/form-data
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 20 * 1024 * 1024; // 20 MB
+    options.MultipartBodyLengthLimit = 20 * 1024 * 1024;
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -20,9 +21,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-// <- adiciona essas duas
-builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-builder.Services.AddAWSService<IAmazonS3>();
+// Credenciais explícitas do Learning Lab
+var awsCredentials = new SessionAWSCredentials(
+    builder.Configuration["AWS:AccessKey"],
+    builder.Configuration["AWS:SecretKey"],
+    builder.Configuration["AWS:SessionToken"]
+);
+
+builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(
+    awsCredentials,
+    Amazon.RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"])
+));
 
 var connectionString = "Server=localhost;Database=ProcessoVacuo;Uid=root;Pwd=;";
 builder.Services.AddScoped<MySqlConnection>(_ => new MySqlConnection(connectionString));
