@@ -102,3 +102,4 @@ C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\obj\D
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.Core.dll
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.Extensions.NETCore.Setup.dll
 C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\AWSSDK.S3.dll
+C:\Users\Davi\source\repos\apiSistemaVacuo\apiSistemaVacuo\apiSistemaVacuo\bin\Debug\net10.0\appsettings.example.json
