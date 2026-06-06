@@ -114,6 +114,12 @@ window.addEventListener('load', () => {
         window.chrome.webview.postMessage('dashboard_pronto');
 });
 
+// Recebe o ID real do ciclo do banco (chamado pelo C# apos IniciarNovoCiclo)
+function receberCicloId(id) {
+    cicloAtualId = id;
+    console.log('Ciclo ID recebido do banco:', cicloAtualId);
+}
+
 function receberContextoUsuario(id, nome, papel) {
     usuarioAtual = id;
     try {
@@ -814,7 +820,7 @@ async function gerarRelatorioPDF(isEmergencia = false, snapshotDados = null) {
 
     doc.setFontSize(12); doc.text('DADOS DO CICLO', 20, y); y += 10; doc.setFontSize(10);
     doc.text(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 20, y); y += 7;
-    doc.text(`Ciclo ID: ${cicloAtualId - 1}`, 20, y); y += 7;
+    doc.text(`Ciclo ID: ${cicloAtualId}`, 20, y); y += 7;
     doc.text(`Operador: ${usuarioAtual || 'Nao identificado'}`, 20, y); y += 7;
     doc.text(`Tempo de Operacao: ${lh}:${lm}:${ls}`, 20, y); y += 7;
     const statusEl = document.getElementById('status-estado');
@@ -851,8 +857,10 @@ async function gerarRelatorioPDF(isEmergencia = false, snapshotDados = null) {
     doc.setTextColor(100, 100, 100); doc.setFontSize(8);
     doc.text('Relatorio gerado automaticamente - TSEA Energy', 105, 285, { align: 'center' });
 
-    const tipo = isEmergencia ? 'EMERGENCIA' : 'ciclo';
-    const filename = `${tipo}_${cicloAtualId - 1}_${usuarioAtual || 'anonimo'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    const data = new Date().toISOString().slice(0, 10);
+    const filename = isEmergencia
+        ? `EMERGENCIA_${cicloAtualId}_${usuarioAtual || 'anonimo'}_${data}.pdf`
+        : `ciclo_${cicloAtualId}_${usuarioAtual || 'anonimo'}_${data}.pdf`;
     doc.save(filename);
     await enviarPDFParaAPI(doc, filename);
 }

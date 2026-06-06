@@ -24,8 +24,8 @@
 }
 
 [data-theme="light"] {
-    --bg-root: #f5f2ef;
-    --bg-panel: #ffffff;
+    --bg-root: #f5f2ef; /* O fundo cinza/creme da tela inteira */
+    --bg-panel: #ffffff; /* O fundo branco dos cards/painéis */
     --bg-surface: #f0ede8;
     --bg-inset: #e8e4de;
     --border-subtle: #d6d0c8;
@@ -33,16 +33,17 @@
     --text-primary: #2a2520;
     --text-secondary: #6b6359;
     --text-muted: #9c958c;
-    --accent: #d0000a;
-    --accent-dim: rgba(208,0,10,.08);
+    --accent: #ff1e27; /* Mantém o vermelho do operador para os destaques */
+    --accent-dim: rgba(255,30,39,.08);
     --accent-border: #aa0018;
     --green: #1a6e2a;
-    --green-bg: rgba(26,110,42,.08);
+    --green-bg: rgba(26,110,42,0.06);
     --green-border: #2a7e3a;
     --valve-open: #1a6e2a;
-    --valve-closed: #d0000a;
+    --valve-closed: #ff1e27;
     --timer-color: #2a2520;
-    --gauge-bar: linear-gradient(to top,#d0000a,#ff3d4a);
+    --chart-line: #5a5550;
+    --gauge-bar: linear-gradient(to top, #ff1e27, #ff3d4a);
 }
 
 /* ============================================================
@@ -1321,17 +1322,22 @@ body {
         }
 
 [data-theme="light"] .mangueira-button {
-    background-color: var(--bg-surface);
+    background-color: #ffffff;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Sombra sutil para dar volume */
 }
 
     [data-theme="light"] .mangueira-button:hover {
-        background-color: var(--bg-panel);
+        border-color: var(--border-mid);
+        background-color: var(--bg-surface);
     }
 
     [data-theme="light"] .mangueira-button.conectada {
         background-color: var(--accent-dim);
-        border-color: var(--accent-border);
-        color: #cc3340;
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 700;
     }
 
 .drum-picker-group {
@@ -1481,3 +1487,107 @@ body {
 
 /* Válvulas no claro — SVG inline usa var() direto */
 [data-theme="light"] .valve-visual svg rect,
+/* ============================================================
+   A JUSTES FO CADOS NOS BOTÕES PRINCIPAIS E BADGES (MODO CLARO)
+   ============================================================ */
+/* 1. BOTÃO INICIAR (Estado padrão/Aguardando - Mais Vivo) */
+[data-theme="light"] .btn-start {
+    background-color: #fca5a5 !important; /* Vermelho coral vivo, mas sem ser o tom de ativo */
+    color: #991b1b !important; /* Texto em vermelho escuro para dar contraste total */
+    border: 1px solid #f87171 !important; /* Borda definida */
+    opacity: 1 !important; /* Remove qualquer opacidade que apague o botão */
+}
+
+/* 2. BOTÃO EMERGÊNCIA (Estado padrão - Mais nítido) */
+[data-theme="light"] .btn-emergency {
+    background-color: #fff1f2 !important; /* Fundo rosa bem sutil e limpo */
+    color: #e11d48 !important; /* Texto vermelho bem vivo e focado */
+    border: 1px solid #fecdd3 !important; /* Borda bem visível */
+}
+
+/* 3. CORRIGINDO O NOME DO OPERÁRIO (Badge de Identificação) */
+/* Coloca o fundo vermelho sutil que estava na primeira imagem da sua tela */
+[data-theme="light"] .usuario-badge {
+    background-color: rgba(214, 0, 28, 0.08) !important;
+    border: 1px solid rgba(214, 0, 28, 0.25) !important;
+    color: #b90015 !important; /* Texto em vermelho industrial legível */
+}
+
+/* 4. GARANTINDO O INTERRUPTOR (TOGGLE) MAIS SUAVE */
+/* Caso a bolinha ainda esteja muito chamativa, esse seletor fixa ela no tom escuro */
+[data-theme="light"] .theme-toggle-thumb {
+    background-color: #475569 !important; /* Cinza ardósia corporativo */
+}
+
+/* ============================================================
+   CORREÇÃO CIRÚRGICA DA ABA DE ÓLEO (FINAL DO ARQUIVO)
+   ============================================================ */
+
+/* 1. RESET: Força o fundo da aba de óleo e dos painéis a voltarem ao normal */
+[data-theme="light"] #oleo.tab-content {
+    background-color: #f1f5f9 !important; /* Devolve o fundo cinza claro */
+}
+
+[data-theme="light"] .op-oleo-tank-panel,
+[data-theme="light"] .op-oleo-status-panel {
+    background-color: #ffffff !important; /* Força os cards a ficarem brancos */
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+/* 2. LADO ESQUERDO: Pinta o líquido interno do Tanque */
+[data-theme="light"] #oilFill {
+    background-color: #ff1e27 !important; /* Vermelho vivo industrial */
+    background: #ff1e27 !important;
+}
+
+/* Texto da porcentagem do tanque (ex: 78%) */
+[data-theme="light"] #oilPercent {
+    color: #ff1e27 !important;
+    font-weight: 800 !important;
+}
+
+/* 3. LADO DIREITO: Pinta a Barra de Enchimento que estava escura */
+[data-theme="light"] .op-nivel-bar-fill {
+    background-color: #ff1e27 !important; /* Mesmo vermelho vivo industrial */
+    background: #ff1e27 !important;
+}
+
+/* Caixa da barra (fundo cinza sutil para dar contraste com o vermelho) */
+[data-theme="light"] .op-nivel-bar-track {
+    background-color: #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* Texto da porcentagem ao lado da barra */
+[data-theme="light"] .op-nivel-bar-val {
+    color: #0f172a !important; /* Preto/Grafite para não sumir no fundo */
+    font-weight: 700 !important;
+}
+
+/* Container/Card da válvula fechada */
+.valvula.fechada {
+    background-color: #ffeef0 !important; /* Fundo suave avermelhado */
+    border-color: #ff1e27 !important;
+}
+
+    /* O contorno oval do medidor */
+    .valvula.fechada .gauge-outline,
+    .valvula.fechada .gauge-capsule {
+        border-color: #ff1e27 !important;
+        color: #ff1e27 !important;
+    }
+
+    /* O texto do número interno (ex: 155deg) */
+    .valvula.fechada .gauge-text,
+    .valvula.fechada .gauge-value {
+        color: #ff1e27 !important;
+    }
+
+    /* O botão/badge inferior escrito FECHADA */
+    .valvula.fechada .btn-status,
+    .valvula.fechada .badge-status {
+        background-color: #ff1e27 !important;
+        color: #ffffff !important; /* Texto branco para dar contraste */
+        border: none !important;
+    }

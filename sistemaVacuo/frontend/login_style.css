@@ -17,18 +17,26 @@
 }
 
 [data-theme="light"] {
-    --bg-root: #f5f2ef;
-    --bg-panel: #ffffff;
-    --bg-surface: #f0ede8;
-    --bg-inset: #e8e4de;
-    --border-subtle: #d6d0c8;
-    --border-mid: #c2bbb2;
-    --text-primary: #2a2520;
-    --text-secondary: #6b6359;
-    --text-muted: #9c958c;
-    --accent: #d0000a;
-    --accent-dim: rgba(208,0,10,.08);
-    --accent-border: #aa0018;
+    --bg-root: #e6e2dd;
+    --bg-panel: #f3f0ec;
+    --bg-surface: #ece8e3;
+    --bg-inset: #e2ddd7;
+    --border-subtle: #d0c9c1;
+    --border-mid: #c0b8ae;
+    --text-primary: #2f2a25;
+    --text-secondary: #72695f;
+    --text-muted: #9b9288;
+    --accent: #e20613;
+    --accent-dim: rgba(226,6,19,.05);
+    --accent-border: #d12a35;
+    --green: #1a6e2a;
+    --green-bg: rgba(26,110,42,.08);
+    --green-border: #2a7e3a;
+    --valve-open: #1a6e2a;
+    --valve-closed: #e20613;
+    --timer-color: #2f2a25;
+    --chart-line: #5a5550;
+    --gauge-bar: linear-gradient(to top, #e20613, #ff4b55);
 }
 
 /* ============================================================
@@ -65,7 +73,7 @@ body {
 .login-card {
     background-color: var(--bg-panel);
     border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent);
+    border-top: 2px solid var(--accent);
     border-radius: 6px;
     padding: 44px 40px 36px;
     width: 100%;
@@ -73,7 +81,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 14px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
 }
 
 .login-logo {
@@ -280,4 +288,25 @@ body {
 [data-theme="light"] .theme-toggle-thumb {
     transform: translateX(15px);
     background: var(--accent);
+}
+
+/* ============================================================
+   AJUSTE DE VISIBILIDADE DO TOGGLE DE TEMA (MODO CLARO)
+   ============================================================ */
+
+/* 1. Força o texto "CLARO" a ficar escuro e bem visível */
+[data-theme="light"] .theme-toggle {
+    color: var(--text-primary) !important; /* Usa o grafite escuro principal */
+    font-weight: 600 !important; /* Dá um leve destaque na escrita */
+}
+
+/* 2. Muda a bolinha do switch para não ser aquele vermelho gritante */
+[data-theme="light"] .theme-toggle-thumb {
+    background-color: var(--text-secondary) !important; /* Muda para um cinza corporativo elegante */
+}
+
+/* 3. Ajusta o fundo do switch para combinar com o modo claro */
+[data-theme="light"] .theme-toggle-track {
+    background: var(--bg-inset) !important;
+    border-color: var(--border-mid) !important;
 }
