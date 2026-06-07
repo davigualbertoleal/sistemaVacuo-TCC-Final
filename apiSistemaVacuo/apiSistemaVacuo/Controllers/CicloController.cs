@@ -6,6 +6,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
+using SistemaVacuoAPI.Services;
 
 namespace SistemaVacuoAPI.Controllers
 {
@@ -14,17 +15,18 @@ namespace SistemaVacuoAPI.Controllers
     public class CicloController : ControllerBase
     {
         private readonly MySqlConnection _connection;
+        private readonly EmailService    _email;
+        private readonly IConfiguration  _config;
 
-        public CicloController(MySqlConnection connection)
+        public CicloController(MySqlConnection connection, EmailService email, IConfiguration config)
         {
             _connection = connection;
+            _email      = email;
+            _config     = config;
         }
 
         // =============================================
         //  POST /api/ciclo/iniciar
-        //  Abre um novo ciclo de vácuo no banco e enfileira
-        //  comando START para o ESP32
-        //  Body: { "operadorId": 1 }
         // =============================================
         [HttpPost("iniciar")]
         public async Task<IActionResult> IniciarCiclo([FromBody] IniciarCicloRequest request)
@@ -33,17 +35,14 @@ namespace SistemaVacuoAPI.Controllers
             {
                 await _connection.OpenAsync();
 
-                // Verifica se já existe ciclo em andamento
                 var checkCmd = new MySqlCommand(
                     "SELECT COUNT(*) FROM ciclos WHERE status IN ('iniciando', 'estagio1', 'estagio2', 'holding')",
                     _connection);
 
                 long ativos = (long)(await checkCmd.ExecuteScalarAsync() ?? 0L);
-
                 if (ativos > 0)
                     return Conflict(new { error = "Já existe um ciclo em andamento" });
 
-                // Cria o ciclo
                 var insertCmd = new MySqlCommand(
                     @"INSERT INTO ciclos (operadorId, dataInicio, status)
                       VALUES (@op, NOW(), 'iniciando');
@@ -53,7 +52,6 @@ namespace SistemaVacuoAPI.Controllers
                 insertCmd.Parameters.AddWithValue("@op", request?.operadorId ?? 0);
                 var cicloId = Convert.ToInt32(await insertCmd.ExecuteScalarAsync());
 
-                // Enfileira comando START para o ESP32
                 var cmdEsp = new MySqlCommand(
                     @"INSERT INTO comandosCiclo (cicloId, dataHora, acao, origem)
                       VALUES (@ciclo, NOW(), 'START', 'API')",
@@ -61,6 +59,46 @@ namespace SistemaVacuoAPI.Controllers
 
                 cmdEsp.Parameters.AddWithValue("@ciclo", cicloId);
                 await cmdEsp.ExecuteNonQueryAsync();
+
+                string operadorNome = "Desconhecido";
+                string operadorIdentificador = "N/A";
+
+                if (request?.operadorId > 0)
+                {
+                    var opCmd = new MySqlCommand(
+                        "SELECT nome, identificador FROM operadores WHERE id = @id LIMIT 1",
+                        _connection);
+                    opCmd.Parameters.AddWithValue("@id", request.operadorId);
+                    var opReader = await opCmd.ExecuteReaderAsync();
+                    if (await opReader.ReadAsync())
+                    {
+                        operadorNome          = opReader["nome"].ToString()          ?? operadorNome;
+                        operadorIdentificador = opReader["identificador"].ToString() ?? operadorIdentificador;
+                    }
+                    await opReader.CloseAsync();
+                }
+
+                var emails = await BuscarEmailsEngenheiros();
+                var emailAdmin = _config["Email:EmailAdmin"];
+                if (!string.IsNullOrWhiteSpace(emailAdmin))
+                    emails.Add(emailAdmin);
+
+                if (emails.Count > 0)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        var corpo = _email.TemplateProcessoIniciado(
+                            cicloId,
+                            operadorNome,
+                            operadorIdentificador,
+                            DateTime.Now);
+
+                        await _email.EnviarAsync(
+                            emails,
+                            $"[TSEA] Ciclo #{cicloId} iniciado — {DateTime.Now:dd/MM HH:mm}",
+                            corpo);
+                    });
+                }
 
                 return Ok(new
                 {
@@ -82,17 +120,14 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  POST /api/ciclo/{id}/parar
-        //  Enfileira comando STOP para o ESP32
-        //  e marca o ciclo como "parando"
         // =============================================
         [HttpPost("{id}/parar")]
-        public async Task<IActionResult> PararCiclo(int id)
+        public async Task<IActionResult> PararCiclo(int id, [FromQuery] string? motivo = null)
         {
             try
             {
                 await _connection.OpenAsync();
 
-                // Verifica se ciclo existe e está ativo
                 var checkCmd = new MySqlCommand(
                     "SELECT status FROM ciclos WHERE id = @id LIMIT 1",
                     _connection);
@@ -106,7 +141,6 @@ namespace SistemaVacuoAPI.Controllers
                 if (status is "parado" or "erro")
                     return BadRequest(new { error = $"Ciclo já está com status '{status}'" });
 
-                // Atualiza status
                 var updateCmd = new MySqlCommand(
                     "UPDATE ciclos SET status = 'parando' WHERE id = @id",
                     _connection);
@@ -114,7 +148,6 @@ namespace SistemaVacuoAPI.Controllers
                 updateCmd.Parameters.AddWithValue("@id", id);
                 await updateCmd.ExecuteNonQueryAsync();
 
-                // Enfileira STOP
                 var cmdEsp = new MySqlCommand(
                     @"INSERT INTO comandosCiclo (cicloId, dataHora, acao, origem)
                       VALUES (@ciclo, NOW(), 'STOP', 'API')",
@@ -122,6 +155,24 @@ namespace SistemaVacuoAPI.Controllers
 
                 cmdEsp.Parameters.AddWithValue("@ciclo", id);
                 await cmdEsp.ExecuteNonQueryAsync();
+
+                var emails = await BuscarEmailsEngenheiros();
+                var emailAdmin = _config["Email:EmailAdmin"];
+                if (!string.IsNullOrWhiteSpace(emailAdmin))
+                    emails.Add(emailAdmin);
+
+                if (emails.Count > 0)
+                {
+                    var motivoFinal = motivo?.ToUpper() ?? "ENCERRAMENTO NORMAL";
+                    _ = Task.Run(async () =>
+                    {
+                        var corpo = _email.TemplateProcessoParado(id, motivoFinal, DateTime.Now);
+                        await _email.EnviarAsync(
+                            emails,
+                            $"[TSEA] Ciclo #{id} encerrado — {motivoFinal}",
+                            corpo);
+                    });
+                }
 
                 return Ok(new
                 {
@@ -143,9 +194,6 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  PATCH /api/ciclo/{id}/status
-        //  ESP32 reporta a transição de estado da máquina
-        //  Body: { "status": "estagio1" }
-        //  Estados válidos: iniciando | estagio1 | estagio2 | holding | parado | erro
         // =============================================
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> AtualizarStatus(int id, [FromBody] AtualizarStatusRequest request)
@@ -180,10 +228,10 @@ namespace SistemaVacuoAPI.Controllers
 
                 return Ok(new
                 {
-                    status    = "ok",
-                    cicloId   = id,
+                    status     = "ok",
+                    cicloId    = id,
                     novoStatus = request.status,
-                    timestamp = DateTime.UtcNow
+                    timestamp  = DateTime.UtcNow
                 });
             }
             catch (Exception ex)
@@ -198,7 +246,6 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  GET /api/ciclo/pendente
-        //  ESP32 consulta se há comando de ciclo pendente (START/STOP)
         // =============================================
         [HttpGet("pendente")]
         public async Task<IActionResult> GetComandoPendente()
@@ -242,7 +289,6 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  PATCH /api/ciclo/comando/{id}/executado
-        //  ESP32 confirma que executou o comando de ciclo
         // =============================================
         [HttpPatch("comando/{id}/executado")]
         public async Task<IActionResult> MarcarComandoExecutado(int id)
@@ -275,7 +321,6 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  GET /api/ciclo
-        //  Lista ciclos recentes
         // =============================================
         [HttpGet]
         public async Task<IActionResult> GetCiclos([FromQuery] int limit = 20)
@@ -292,8 +337,8 @@ namespace SistemaVacuoAPI.Controllers
                     _connection);
 
                 var reader = await cmd.ExecuteReaderAsync();
-
                 var ciclos = new List<object>();
+
                 while (await reader.ReadAsync())
                 {
                     ciclos.Add(new
@@ -322,7 +367,6 @@ namespace SistemaVacuoAPI.Controllers
 
         // =============================================
         //  GET /api/ciclo/{id}
-        //  Detalhes de um ciclo específico
         // =============================================
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCiclo(int id)
@@ -363,6 +407,34 @@ namespace SistemaVacuoAPI.Controllers
                 await _connection.CloseAsync();
             }
         }
+
+        // =============================================
+        //  HELPER PRIVADO — busca emails de engenheiros/supervisores
+        // =============================================
+        private async Task<List<string>> BuscarEmailsEngenheiros()
+        {
+            var emails = new List<string>();
+            try
+            {
+                var cmd = new MySqlCommand(
+                    @"SELECT email FROM operadores
+                      WHERE papel IN ('engenheiro', 'supervisor')
+                      AND email IS NOT NULL
+                      AND email != ''",
+                    _connection);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var email = reader["email"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(email))
+                        emails.Add(email);
+                }
+                await reader.CloseAsync();
+            }
+            catch { /* silencioso — email é secundário */ }
+            return emails;
+        }
     }
 
     // =============================================
@@ -376,7 +448,6 @@ namespace SistemaVacuoAPI.Controllers
     public class AtualizarStatusRequest
     {
         /// <summary>
-        /// Estados espelhando o ControlState do VacuumController.h:
         /// iniciando | estagio1 | estagio2 | holding | parando | parado | erro
         /// </summary>
         public string? status { get; set; }

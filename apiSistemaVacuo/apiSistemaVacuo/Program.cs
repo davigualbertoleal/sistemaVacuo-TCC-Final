@@ -1,6 +1,7 @@
 using MySql.Data.MySqlClient;
 using Amazon.S3;
 using Amazon.Runtime;
+using SistemaVacuoAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,9 @@ builder.Services.AddSingleton<IAmazonS3>(new AmazonS3Client(
 
 var connectionString = "Server=localhost;Database=ProcessoVacuo;Uid=root;Pwd=;";
 builder.Services.AddScoped<MySqlConnection>(_ => new MySqlConnection(connectionString));
+
+// Serviço de email
+builder.Services.AddScoped<EmailService>();
 
 var app = builder.Build();
 
