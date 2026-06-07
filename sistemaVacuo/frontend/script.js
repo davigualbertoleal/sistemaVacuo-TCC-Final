@@ -40,6 +40,11 @@ const SENSOR_MBAR_MIN = -150;
 const SENSOR_MBAR_MAX = 10;
 
 // =============================================
+//  CONVERSAO PA -> mBar
+// =============================================
+function paParaMbar(pa) { return pa * 0.01; }
+
+// =============================================
 //  STORAGE SEGURO
 // =============================================
 const memStorage = {};
@@ -417,7 +422,7 @@ function atualizarValvulaVisual(num, angulo) {
 // =============================================
 //  PROCESSO E TIMER
 // =============================================
-function iniciarProcesso() {
+async function iniciarProcesso() {
     if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) { alert('Conecte pelo menos 1 tubo para iniciar!'); return; }
     if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) { alert('Abra pelo menos 1 valvula para iniciar!'); return; }
 
@@ -425,6 +430,22 @@ function iniciarProcesso() {
     tempoDecorrido = 0;
     nivelCheio = false;
     tempCoolingStarted = false;
+
+    // Registra o ciclo na API e dispara o email
+    try {
+        const res = await fetch(`${API_URL}/ciclo/iniciar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operadorId: parseInt(usuarioAtual) || 0 })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            cicloAtualId = data.cicloId;
+            console.log('Ciclo registrado:', cicloAtualId);
+        }
+    } catch (err) {
+        console.warn('Erro ao registrar ciclo:', err.message);
+    }
 
     dadosOleo = { pressao: 0, temperatura: 60, nivel: 0, fluxo: 0 };
     historicoVacuo.labels = []; historicoVacuo.values = [];
@@ -476,11 +497,20 @@ function iniciarProcesso() {
     console.log('Processo iniciado. Limite:', tempoLimite + 's');
 }
 
-function pararProcesso() {
+function pararProcesso(motivo = null) {
     processoEmAndamento = false;
     if (timerInterval) clearInterval(timerInterval);
     if (window.apiInterval) clearInterval(window.apiInterval);
     pararSimulacaoOleo();
+
+    // Encerra o ciclo na API
+    if (cicloAtualId) {
+        const url = motivo
+            ? `${API_URL}/ciclo/${cicloAtualId}/parar?motivo=${motivo}`
+            : `${API_URL}/ciclo/${cicloAtualId}/parar`;
+        fetch(url, { method: 'POST' }).catch(() => { });
+    }
+
     document.getElementById('btnIniciar').disabled = false;
     const statusEl = document.getElementById('status-estado');
     if (statusEl) { statusEl.textContent = 'OPERACIONAL'; statusEl.style.color = ''; }
@@ -496,7 +526,7 @@ function emergencia() {
 
     modoEmergencia = true;
     const snaphotDados = dadosAtual ? { ...dadosAtual } : null;
-    pararProcesso();
+    pararProcesso("EMERGENCIA");
     pararSimulacaoOleo();
     gerarRelatorioPDF(true, snaphotDados);
 
