@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 02/06/2026 às 06:14
+-- Tempo de geração: 08/06/2026 às 00:42
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.2.12
 
@@ -39,27 +39,6 @@ CREATE TABLE `alertasseguranca` (
   `operadorResolucaoId` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Despejando dados para a tabela `alertasseguranca`
---
-
-INSERT INTO `alertasseguranca` (`id`, `cicloId`, `dataHora`, `nivelGravidade`, `descricao`, `leituraId`, `resolvido`, `dataHoraResolucao`, `operadorResolucaoId`) VALUES
-(1, 1, '2026-06-01 20:38:34', 'Grave', 'Emergência acionada pelo operador OP-003 (João Marcos)', NULL, 0, NULL, NULL);
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `ciclos`
---
-
-CREATE TABLE `ciclos` (
-  `id` int(11) NOT NULL,
-  `operadorId` int(11) NOT NULL DEFAULT 0,
-  `dataInicio` datetime NOT NULL,
-  `dataFim` datetime DEFAULT NULL,
-  `status` enum('iniciando','estagio1','estagio2','holding','parando','parado','erro') NOT NULL DEFAULT 'iniciando'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 -- --------------------------------------------------------
 
 --
@@ -79,39 +58,10 @@ CREATE TABLE `ciclosprocesso` (
 --
 
 INSERT INTO `ciclosprocesso` (`id`, `operadorResponsavelId`, `dataInicio`, `dataFim`, `status`) VALUES
-(1, NULL, '2026-04-27 20:07:23', '2026-05-02 01:09:06', 'Concluído');
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `comandosbomba`
---
-
-CREATE TABLE `comandosbomba` (
-  `id` int(11) NOT NULL,
-  `cicloId` int(11) NOT NULL DEFAULT 0,
-  `dataHora` datetime NOT NULL,
-  `ligar` tinyint(1) NOT NULL,
-  `origem` varchar(20) NOT NULL DEFAULT 'API',
-  `executado` tinyint(1) NOT NULL DEFAULT 0,
-  `dataExecucao` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estrutura para tabela `comandosciclo`
---
-
-CREATE TABLE `comandosciclo` (
-  `id` int(11) NOT NULL,
-  `cicloId` int(11) NOT NULL DEFAULT 0,
-  `dataHora` datetime NOT NULL,
-  `acao` enum('START','STOP') NOT NULL,
-  `origem` varchar(20) NOT NULL DEFAULT 'API',
-  `executado` tinyint(1) NOT NULL DEFAULT 0,
-  `dataExecucao` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(1, NULL, '2026-04-27 20:07:23', '2026-05-28 21:27:08', 'Concluído'),
+(2, NULL, '2026-06-04 19:40:11', NULL, 'Em Andamento'),
+(3, NULL, '2026-06-04 19:45:00', NULL, 'Em Andamento'),
+(4, NULL, '2026-06-04 20:06:13', NULL, 'Em Andamento');
 
 -- --------------------------------------------------------
 
@@ -124,10 +74,18 @@ CREATE TABLE `comandosservo` (
   `cicloId` int(11) NOT NULL DEFAULT 0,
   `dataHora` datetime NOT NULL,
   `angulo` float NOT NULL,
-  `origem` varchar(20) NOT NULL DEFAULT 'API',
+  `origem` varchar(100) DEFAULT 'API',
   `executado` tinyint(1) NOT NULL DEFAULT 0,
   `dataExecucao` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `comandosservo`
+--
+
+INSERT INTO `comandosservo` (`id`, `cicloId`, `dataHora`, `angulo`, `origem`, `executado`, `dataExecucao`) VALUES
+(1, 1, '2026-06-03 16:31:03', 90, 'Console Test', 0, NULL),
+(2, 1, '2026-06-03 16:39:54', 90, 'Console Test', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -160,17 +118,7 @@ INSERT INTO `leiturassensores` (`id`, `cicloId`, `dataHora`, `estadoMaquina`, `p
 (16, 1, '2026-04-27 20:07:42', 'Ligado', 500, 300, 2.5, 280, 2.3, 290, 2.4, 0, 0, 0),
 (17, 1, '2026-04-27 20:08:39', 'Desligado', 510.63, 533.97, 0, 499.62, 0, 470.03, 0, 0, 0, 0),
 (18, 1, '2026-04-27 20:08:44', 'Desligado', 463.58, 497.14, 0, 501.09, 0, 434.48, 0, 0, 0, 0),
-(19, 1, '2026-04-27 20:09:19', 'Desligado', 466.41, 474.09, 0, 485.8, 0, 427.29, 0, 0, 0, 0),
-(20, 1, '2026-04-27 20:10:47', 'Desligado', 424.52, 442.45, 0, 553.95, 0, 414.11, 0, 0, 0, 0),
-(21, 1, '2026-04-27 22:13:38', 'Ligado', 810.93, 799.81, 1.7, 743.58, 4.1, 865.26, 3.7, 0, 0, 0),
-(28, 1, '2026-04-27 22:16:50', 'Ligado', 810.93, 799.81, 1.7, 664.91, 6, 945.55, 5.8, 0, 0, 0),
-(32, 1, '2026-04-27 22:19:18', 'Ligado', 811.43, 799.31, 1.7, 295.77, 11.4, 845.95, 2.9, 0, 0, 0),
-(33, 1, '2026-04-27 22:19:23', 'Ligado', 811.13, 799.51, 1.7, 318.15, 11.1, 824.61, 1.8, 0, 0, 0),
-(34, 1, '2026-04-27 22:19:29', 'Ligado', 811.03, 799.31, 1.7, 324.77, 11, 840.19, 2.7, 0, 0, 0),
-(35, 1, '2026-04-27 22:19:38', 'Ligado', 811.23, 799.41, 1.7, 325.56, 11, 762.39, 3.5, 0, 0, 0),
-(36, 1, '2026-04-27 22:20:51', 'Ligado', 219.45, 503.64, 8.4, 327.38, 5.2, 784.9, 11.9, 0, 0, 0),
-(37, 1, '2026-04-27 22:21:02', 'Ligado', 219.25, 181.73, 3.1, 303.44, 4.6, 726.31, 11.3, 0, 0, 0),
-(38, 1, '2026-04-27 22:21:08', 'Ligado', 722.34, 595.84, 5.6, 342.37, 9.7, 752.57, 2.7, 0, 0, 0);
+(19, 1, '2026-04-27 20:09:19', 'Desligado', 466.41, 474.09, 0, 485.8, 0, 427.29, 0, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -181,19 +129,15 @@ INSERT INTO `leiturassensores` (`id`, `cicloId`, `dataHora`, `estadoMaquina`, `p
 CREATE TABLE `operadores` (
   `id` int(11) NOT NULL,
   `nome` varchar(100) NOT NULL,
-  `identificador` varchar(20) NOT NULL,
-  `papel` enum('supervisor','engenheiro','operador') NOT NULL DEFAULT 'operador'
+  `identificador` varchar(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `operadores`
 --
 
-INSERT INTO `operadores` (`id`, `nome`, `identificador`, `papel`) VALUES
-(1, 'Carlos Silva', 'ENG-001', 'engenheiro'),
-(2, 'João Souza', 'OP-001', 'operador'),
-(3, 'João Marcos', 'op-003', 'operador'),
-(4, 'Eduarda Coimbra', 'eng-002', 'engenheiro');
+INSERT INTO `operadores` (`id`, `nome`, `identificador`) VALUES
+(1, 'Admin', 'OP-001');
 
 -- --------------------------------------------------------
 
@@ -240,13 +184,6 @@ ALTER TABLE `alertasseguranca`
   ADD KEY `operadorResolucaoId` (`operadorResolucaoId`);
 
 --
--- Índices de tabela `ciclos`
---
-ALTER TABLE `ciclos`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_status` (`status`);
-
---
 -- Índices de tabela `ciclosprocesso`
 --
 ALTER TABLE `ciclosprocesso`
@@ -254,25 +191,10 @@ ALTER TABLE `ciclosprocesso`
   ADD KEY `operadorResponsavelId` (`operadorResponsavelId`);
 
 --
--- Índices de tabela `comandosbomba`
---
-ALTER TABLE `comandosbomba`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_executado` (`executado`);
-
---
--- Índices de tabela `comandosciclo`
---
-ALTER TABLE `comandosciclo`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_executado` (`executado`);
-
---
 -- Índices de tabela `comandosservo`
 --
 ALTER TABLE `comandosservo`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_executado` (`executado`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Índices de tabela `leiturassensores`
@@ -288,6 +210,9 @@ ALTER TABLE `leiturassensores`
 ALTER TABLE `operadores`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `identificador` (`identificador`);
+  ALTER TABLE operadores
+  ADD COLUMN papel ENUM('supervisor','engenheiro','operador') NOT NULL DEFAULT 'operador',
+  ADD COLUMN email VARCHAR(100) DEFAULT NULL;
 
 --
 -- Índices de tabela `registrovalvulas`
@@ -312,49 +237,31 @@ ALTER TABLE `reguladores`
 -- AUTO_INCREMENT de tabela `alertasseguranca`
 --
 ALTER TABLE `alertasseguranca`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT de tabela `ciclos`
---
-ALTER TABLE `ciclos`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de tabela `ciclosprocesso`
 --
 ALTER TABLE `ciclosprocesso`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT de tabela `comandosbomba`
---
-ALTER TABLE `comandosbomba`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de tabela `comandosciclo`
---
-ALTER TABLE `comandosciclo`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de tabela `comandosservo`
 --
 ALTER TABLE `comandosservo`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de tabela `leiturassensores`
 --
 ALTER TABLE `leiturassensores`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3014;
 
 --
 -- AUTO_INCREMENT de tabela `operadores`
 --
 ALTER TABLE `operadores`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de tabela `registrovalvulas`
@@ -405,6 +312,40 @@ ALTER TABLE `registrovalvulas`
 ALTER TABLE `reguladores`
   ADD CONSTRAINT `reguladores_ibfk_1` FOREIGN KEY (`cicloId`) REFERENCES `ciclosprocesso` (`id`);
 COMMIT;
+
+CREATE TABLE ciclos (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  operadorId int(11) NOT NULL DEFAULT 0,
+  dataInicio datetime NOT NULL,
+  dataFim datetime DEFAULT NULL,
+  status enum('iniciando','estagio1','estagio2','holding','parando','parado','erro') NOT NULL DEFAULT 'iniciando',
+  PRIMARY KEY (id),
+  KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE comandosbomba (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  cicloId int(11) NOT NULL DEFAULT 0,
+  dataHora datetime NOT NULL,
+  ligar tinyint(1) NOT NULL,
+  origem varchar(20) NOT NULL DEFAULT 'API',
+  executado tinyint(1) NOT NULL DEFAULT 0,
+  dataExecucao datetime DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_executado (executado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE comandosciclo (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  cicloId int(11) NOT NULL DEFAULT 0,
+  dataHora datetime NOT NULL,
+  acao enum('START','STOP') NOT NULL,
+  origem varchar(20) NOT NULL DEFAULT 'API',
+  executado tinyint(1) NOT NULL DEFAULT 0,
+  dataExecucao datetime DEFAULT NULL,
+  PRIMARY KEY (id),
+  KEY idx_executado (executado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
