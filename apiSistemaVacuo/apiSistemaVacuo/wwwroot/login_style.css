@@ -1,0 +1,312 @@
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root, [data-theme="dark"] {
+    --bg-root: #16161a;
+    --bg-panel: #1e1e23;
+    --bg-surface: #26262c;
+    --bg-inset: #111114;
+    --border-subtle: #2e2e35;
+    --border-mid: #3a3a42;
+    --text-primary: #eeeef2;
+    --text-secondary: #8888a0;
+    --text-muted: #4e4e62;
+    --accent: #e20613;
+    --accent-dim: rgba(226,6,19,.10);
+    --accent-border: #5a0b11;
+}
+
+[data-theme="light"] {
+    --bg-root: #e6e2dd;
+    --bg-panel: #f3f0ec;
+    --bg-surface: #ece8e3;
+    --bg-inset: #e2ddd7;
+    --border-subtle: #d0c9c1;
+    --border-mid: #c0b8ae;
+    --text-primary: #2f2a25;
+    --text-secondary: #72695f;
+    --text-muted: #9b9288;
+    --accent: #e20613;
+    --accent-dim: rgba(226,6,19,.05);
+    --accent-border: #d12a35;
+    --green: #1a6e2a;
+    --green-bg: rgba(26,110,42,.08);
+    --green-border: #2a7e3a;
+    --valve-open: #1a6e2a;
+    --valve-closed: #e20613;
+    --timer-color: #2f2a25;
+    --chart-line: #5a5550;
+    --gauge-bar: linear-gradient(to top, #e20613, #ff4b55);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-root);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans','Segoe UI',sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color .25s, color .25s;
+}
+
+/* ============================================================
+   CARD
+   ============================================================ */
+.login-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.login-card {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-top: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 44px 40px 36px;
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+.login-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--accent);
+    text-align: center;
+}
+
+.login-system {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.login-divider {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: 2px 0;
+}
+
+.login-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+#inputId {
+    width: 100%;
+    padding: 14px 16px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-align: center;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+    #inputId:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+
+    #inputId:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    #inputId::placeholder {
+        color: var(--text-muted);
+        letter-spacing: 3px;
+        font-size: 16px;
+    }
+
+/* ============================================================
+   BOTÃO
+   ============================================================ */
+.btn-login {
+    width: 100%;
+    padding: 13px;
+    background-color: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    color: #ff7070;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .btn-login:hover:not(:disabled) {
+        background-color: var(--accent-border);
+        color: #fff;
+    }
+
+    .btn-login:disabled {
+        opacity: .65;
+        cursor: not-allowed;
+    }
+
+.btn-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,112,112,.3);
+    border-top-color: #ff7070;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================================
+   ERRO
+   ============================================================ */
+.error-msg {
+    background-color: var(--accent-dim);
+    border-left: 2px solid var(--accent);
+    color: #ff7070;
+    padding: 10px 12px;
+    border-radius: 2px;
+    font-size: 10px;
+    display: none;
+    text-align: left;
+    letter-spacing: .3px;
+    font-family: 'IBM Plex Mono', monospace;
+    animation: fadeIn .15s ease;
+}
+
+    .error-msg.show {
+        display: block;
+    }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.login-footer {
+    color: var(--text-muted);
+    font-size: 9px;
+    text-align: center;
+    letter-spacing: .5px;
+    line-height: 1.7;
+    margin-top: 4px;
+}
+
+/* ============================================================
+   TOGGLE TEMA (canto inferior direito)
+   ============================================================ */
+.theme-toggle {
+    position: fixed;
+    bottom: 18px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+}
+
+.theme-toggle-track {
+    width: 32px;
+    height: 17px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 999px;
+    position: relative;
+    transition: background .2s;
+}
+
+.theme-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: transform .2s, background .2s;
+}
+
+[data-theme="light"] .theme-toggle-thumb {
+    transform: translateX(15px);
+    background: var(--accent);
+}
+
+/* ============================================================
+   AJUSTE DE VISIBILIDADE DO TOGGLE DE TEMA (MODO CLARO)
+   ============================================================ */
+
+/* 1. Força o texto "CLARO" a ficar escuro e bem visível */
+[data-theme="light"] .theme-toggle {
+    color: var(--text-primary) !important; /* Usa o grafite escuro principal */
+    font-weight: 600 !important; /* Dá um leve destaque na escrita */
+}
+
+/* 2. Muda a bolinha do switch para não ser aquele vermelho gritante */
+[data-theme="light"] .theme-toggle-thumb {
+    background-color: var(--text-secondary) !important; /* Muda para um cinza corporativo elegante */
+}
+
+/* 3. Ajusta o fundo do switch para combinar com o modo claro */
+[data-theme="light"] .theme-toggle-track {
+    background: var(--bg-inset) !important;
+    border-color: var(--border-mid) !important;
+}

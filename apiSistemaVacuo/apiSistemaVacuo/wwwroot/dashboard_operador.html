@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSEA Energy - Sistema de Vácuo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="operador_style.css">
+</head>
+<body>
+    <!-- TOP INFO BAR -->
+    <div class="top-info">
+        <span id="relogioDisplay">TSEA Energy  |  --/--/--  --:--:--</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="role-badge">OPERADOR</span>
+            <span class="usuario-badge" id="usuarioLogado">Não identificado</span>
+            <div class="theme-toggle" id="themeToggle">
+                <div class="theme-toggle-track">
+                    <div class="theme-toggle-thumb"></div>
+                </div>
+                <span id="themeLabel">ESCURO</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="panel header-panel">
+        <img src="https://www.tseaenergia.com.br/wp-content/uploads/2025/12/TSEA_Logotipos_RGB-11-scaled.png" class="header-logo-center" alt="Logo TSEA" />
+        <div>
+            <h1 class="header-title">SISTEMA DE GERENCIAMENTO A VÁCUO E CONTROLE DE VÁLVULAS</h1>
+            <div class="header-subtitle">PAINEL DE CONTROLE PRINCIPAL</div>
+        </div>
+
+        <button class="btn-close">X</button>
+    </div>
+
+    <!-- GRID PRINCIPAL UNIFICADO (SEM ABAS) -->
+    <div class="dashboard-unificado">
+
+        <!-- ========== ZONA 1: PAINEL ESQUERDO (CONTROLES) ========== -->
+        <div class="zona-controles panel">
+            <div class="section-title">CONTROLES</div>
+            <div class="divider"></div>
+
+            <!-- Status -->
+            <div class="status-item">
+                <span class="status-label">ESTADO</span>
+                <span class="status-value" id="status-estado">AGUARDANDO</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">BOMBA</span>
+                <span class="status-value on" id="status-bomba">--</span>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-title">TUBOS - Aperte Neles Para Conectar</div>
+
+            <button class="mangueira-button" data-mangueira="1" aria-pressed="false" onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')">
+                <span class="tubo-nome">Tubo 1</span>
+                <span class="tubo-status"></span>
+            </button>
+
+            <button class="mangueira-button" data-mangueira="2" aria-pressed="false" onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')">
+                <span class="tubo-nome">Tubo 2</span>
+                <span class="tubo-status"></span>
+            </button>
+
+            <button class="mangueira-button" data-mangueira="3" aria-pressed="false" onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')">
+                <span class="tubo-nome">Tubo 3</span>
+                <span class="tubo-status"></span>
+            </button>
+
+            <div class="divider"></div>
+
+            <!-- Timer -->
+            <div class="timer-container">
+                <span class="timer-label">TEMPO RESTANTE</span>
+                <span class="timer-value" id="timerDisplay">00:00:00</span>
+                <span class="timer-limit" id="timerLimit"></span>
+            </div>
+
+
+
+            <!-- Botões principais -->
+            <div class="button-group">
+                <button class="btn btn-start desativado" id="btnIniciar" disabled="">INICIAR</button>
+                <button class="btn btn-emergency" id="btnEmergencia" disabled="" style="opacity:0.4;">EMERGÊNCIA</button>
+            </div>
+        </div>
+
+        <!-- ========== ZONA 2: CENTRAL (GRÁFICO + MÉTRICAS) ========== -->
+        <div class="zona-central">
+            <!-- Gráfico de Pressão -->
+            <div class="panel chart-panel-unificado">
+                <div class="chart-header">
+                    <div class="chart-title">PRESSÃO DA CÂMARA</div>
+                    <div style="display:flex; align-items:baseline; gap:8px;">
+                        <span class="chart-main-value" id="pressaoValue">--</span>
+                        <span class="chart-unit">mBar</span>
+                    </div>
+                </div>
+
+                <span class="fase-badge aguard" id="faseDisplay">AGUARDANDO INÍCIO</span>
+
+                <div class="chart-container" style="flex:1; min-height:0;">
+                    <canvas id="vacuoChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Métricas rápidas -->
+            <div class="op-metrics-row">
+                <div class="op-metric-card">
+                    <span class="op-metric-label">TUBO 1</span>
+                    <span class="op-metric-value" id="metricT1">--</span>
+                    <span class="op-metric-unit">mBar</span>
+                </div>
+                <div class="op-metric-card">
+                    <span class="op-metric-label">TUBO 2</span>
+                    <span class="op-metric-value" id="metricT2">--</span>
+                    <span class="op-metric-unit">mBar</span>
+                </div>
+                <div class="op-metric-card">
+                    <span class="op-metric-label">TUBO 3</span>
+                    <span class="op-metric-value" id="metricT3">--</span>
+                    <span class="op-metric-unit">mBar</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ZONA 3: VÁLVULAS (REESTRUTURADAS) ========== -->
+        <div class="zona-valvulas panel">
+            <div class="section-title">VÁLVULAS - Aperte Para Abri-las</div>
+            <div class="divider"></div>
+
+            <div class="valve-compacta">
+                <span class="valve-num">VÁLVULA 1</span>
+
+                <div class="valve-content-wrapper">
+                    <div class="valve-visual-modern" id="valveVisual1">
+                        <svg viewBox="0 -15 100 115" class="valve-svg">
+                            <rect class="valve-handle" x="30" y="8" width="55" height="14" rx="7" />
+                            <rect class="valve-neck" x="44" y="22" width="12" height="20" />
+                            <circle class="valve-body-circle" cx="50" cy="62" r="26" />
+                            <text id="valveAngle1" class="valve-center-text" x="50" y="68" text-anchor="middle">0°</text>
+                        </svg>
+                    </div>
+
+                    <div class="valve-data-modern">
+                        <div class="data-field">
+                            <span class="data-label">PRESSÃO</span>
+                            <span class="data-value" id="valvePressure1">--</span>
+                        </div>
+                        <div class="data-field">
+                            <span class="data-label">FLUXO</span>
+                            <span class="data-value" id="valveFlow1">--</span>
+                        </div>
+                        <div class="data-field">
+                            <span class="data-label">ÂNGULO</span>
+                            <span class="data-value" id="valveAngleTxt1">0°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="servo-button aberto" id="btnServo1" data-servo="1">ABERTA</button>
+            </div>
+
+            <div class="valve-compacta">
+                <span class="valve-num">VÁLVULA 2</span>
+
+                <div class="valve-content-wrapper">
+                    <div class="valve-visual-modern" id="valveVisual2">
+                        <svg viewBox="0 -15 100 115" class="valve-svg">
+                            <rect class="valve-handle" x="30" y="8" width="55" height="14" rx="7" />
+                            <rect class="valve-neck" x="44" y="22" width="12" height="20" />
+                            <circle class="valve-body-circle" cx="50" cy="62" r="26" />
+                            <text id="valveAngle2" class="valve-center-text" x="50" y="68" text-anchor="middle">0°</text>
+                        </svg>
+                    </div>
+
+                    <div class="valve-data-modern">
+                        <div class="data-field">
+                            <span class="data-label">PRESSÃO</span>
+                            <span class="data-value" id="valvePressure2">--</span>
+                        </div>
+                        <div class="data-field">
+                            <span class="data-label">FLUXO</span>
+                            <span class="data-value" id="valveFlow2">--</span>
+                        </div>
+                        <div class="data-field">
+                            <span class="data-label">ÂNGULO</span>
+                            <span class="data-value" id="valveAngleTxt2">0°</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="servo-button fechado" id="btnServo2" data-servo="2">FECHADA (Aperte para abrir)</button>
+            </div>
+        </div>
+
+        <!-- ========== ZONA 4: PAINEL INFERIOR (ÓLEO) ========== -->
+        <div class="zona-oleo panel">
+            <div class="oleo-grid-unificado">
+                <!-- Tanque de óleo -->
+                <div class="oleo-tank-section">
+                    <span class="section-title">REGULADOR</span>
+                    <div class="tank-wrapper">
+                        <div class="tank">
+                            <div id="oilFill"></div>
+                            <div class="tank-glass"></div>
+                        </div>
+                        <span id="oilPercent">0%</span>
+                    </div>
+                </div>
+
+                <!-- Indicadores do óleo -->
+                <div class="oleo-indicators-section">
+                    <div class="op-oleo-ind">
+                        <span class="op-oleo-ind-label">NÍVEL</span>
+                        <div style="display:flex; align-items:baseline; gap:4px;">
+                            <span class="op-oleo-ind-val" id="oleoNivel">0.0</span>
+                            <span class="op-oleo-ind-unit">%</span>
+                        </div>
+                    </div>
+                    <div class="op-oleo-ind">
+                        <span class="op-oleo-ind-label">PRESSÃO</span>
+                        <div style="display:flex; align-items:baseline; gap:4px;">
+                            <span class="op-oleo-ind-val" id="oleoPressao">0.0</span>
+                            <span class="op-oleo-ind-unit">Bar</span>
+                        </div>
+                    </div>
+                    <div class="op-oleo-ind">
+                        <span class="op-oleo-ind-label">TEMPERATURA</span>
+                        <div style="display:flex; align-items:baseline; gap:4px;">
+                            <span class="op-oleo-ind-val" id="oleoTemp">60.0</span>
+                            <span class="op-oleo-ind-unit">°C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de nível + Semáforo -->
+                <div class="oleo-status-section">
+                    <div class="op-nivel-bar-section">
+                        <span class="op-nivel-bar-label">NÍVEL DO REGULADOR</span>
+                        <div class="op-nivel-bar-track">
+                            <div class="op-nivel-bar-fill" id="nivelBarFill"></div>
+                            <span class="op-nivel-bar-val" id="nivelBarVal">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="op-oleo-semaforo">
+                        <div class="op-sema-item" id="semaFiltro">
+                            <span class="op-sema-dot"></span>
+                            <span id="semaFiltroTxt">FILTRO</span>
+                        </div>
+                        <div class="op-sema-item" id="semaCirculacao">
+                            <span class="op-sema-dot"></span>
+                            <span id="semaCirculacaoTxt">CIRCULAÇÃO</span>
+                        </div>
+                        <div class="op-sema-item" id="semaEstado">
+                            <span class="op-sema-dot"></span>
+                            <span id="semaEstadoTxt">ESTADO</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini gráfico de óleo -->
+                <div class="oleo-chart-section">
+                    <div class="chart-container" style="height:100%;">
+                        <canvas id="oleoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAIS (mantidos iguais) -->
+    <div class="modal-overlay hidden" id="modalTimer">
+        <div class="modal-content">
+            <div class="modal-logo">TSEA ENERGY</div>
+            <h2>DEFINIR TEMPO</h2>
+            <p>Horas : Minutos : Segundos</p>
+            <div class="drum-picker-group">
+                <div class="drum-picker-col">
+                    <span class="drum-label">H</span>
+                    <div class="drum-wrapper" id="drumHorasWrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumHoras"></div>
+                        <div class="drum-fade-bot"></div>
+                    </div>
+                </div>
+                <span class="drum-sep">:</span>
+                <div class="drum-picker-col">
+                    <span class="drum-label">M</span>
+                    <div class="drum-wrapper" id="drumMinutosWrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumMinutos"></div>
+                        <div class="drum-fade-bot"></div>
+                    </div>
+                </div>
+                <span class="drum-sep">:</span>
+                <div class="drum-picker-col">
+                    <span class="drum-label">S</span>
+                    <div class="drum-wrapper" id="drumSegundosWrapper">
+                        <div class="drum-fade-top"></div>
+                        <div class="drum-highlight"></div>
+                        <div class="drum-scroll" id="drumSegundos"></div>
+                        <div class="drum-fade-bot"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="drum-hint-error" id="drumHint" style="display:none;"></div>
+            <button class="btn-modal btn-confirm-start" id="btnConfirmarTimer">CONFIRMAR</button>
+            <button class="btn-modal" id="btnCancelarTimer">CANCELAR</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modalTempoEncerrado">
+        <div class="modal-confirm">
+            <div class="modal-confirm-icon">✓</div>
+            <h3>TEMPO ENCERRADO</h3>
+            <p>O ciclo de operação foi concluído. O relatório foi gerado automaticamente.</p>
+            <button class="btn-confirm-start" id="btnFecharTempoEncerrado" style="width:100%;">OK</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modalEmergAtivada">
+        <div class="modal-confirm">
+            <div class="modal-confirm-icon">!</div>
+            <h3>EMERGÊNCIA ATIVADA</h3>
+            <p>Todas as válvulas foram fechadas. Aguarde a liberação do supervisor.</p>
+            <button class="btn-confirm-ok" id="btnFecharEmergAtivada" style="width:100%;">OK</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modalFechar">
+        <div class="modal-confirm">
+            <div class="modal-confirm-icon">✕</div>
+            <h3>ENCERRAR SESSÃO</h3>
+            <p>Deseja realmente sair do sistema?</p>
+            <div class="modal-confirm-buttons">
+                <button class="btn-confirm-cancel" id="btnCancelarFechar">CANCELAR</button>
+                <button class="btn-confirm-ok" id="btnConfirmarFechar">SAIR</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="operador_script.js"></script>
+</body>
+</html>
