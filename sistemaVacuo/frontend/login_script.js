@@ -4,7 +4,7 @@
 //  envia postMessage para o WebView2 (C#)
 // =============================================
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = `http://${window.location.hostname}:5000/api`;
 
 // Fallback local caso a API esteja offline
 const FALLBACK_USUARIOS = {

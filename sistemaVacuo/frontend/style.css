@@ -25,6 +25,10 @@
     --timer-color: #eeeef2;
     --chart-line: #c0c0d0;
     --gauge-bar: linear-gradient(to top, #c40510, #ff3d4a);
+    /* role badge (engenheiro) */
+    --role-badge-bg: rgba(226,6,19,.08);
+    --role-badge-border: #5a0b11;
+    --role-badge-text: #ff6060;
 }
 
 /* ==========================================================================
@@ -32,26 +36,38 @@
    ========================================================================== */
 
 [data-theme="light"] {
-    --bg-root: #f5f2ef; /* Fundo geral mais suave, levemente quente */
-    --bg-panel: #ffffff; /* Painéis brancos puros */
-    --bg-surface: #f0ede8; /* Superfícies sutis */
-    --bg-inset: #e8e4de; /* Insetos mais escuros mas suaves */
-    --border-subtle: #d6d0c8; /* Bordas suaves */
-    --border-mid: #c2bbb2; /* Bordas médias */
-    --text-primary: #2a2520; /* Texto principal escuro mas não preto */
-    --text-secondary: #6b6359; /* Texto secundário */
-    --text-muted: #9c958c; /* Texto desabilitado */
-    --accent: #d0000a; /* Vermelho mais forte e vibrante */
-    --accent-dim: rgba(208,0,10,0.08); /* Fundo vermelho sutil */
-    --accent-border: #aa0018; /* Borda vermelha mais escura */
-    --green: #1a6e2a; /* Verde mais escuro para contraste */
-    --green-bg: rgba(26,110,42,0.08);
-    --green-border: #2a7e3a;
-    --valve-open: #1a6e2a; /* Válvula aberta - verde */
-    --valve-closed: #d0000a; /* Válvula fechada - vermelho */
-    --timer-color: #2a2520;
-    --chart-line: #5a5550;
-    --gauge-bar: linear-gradient(to top, #d0000a, #ff3d4a);
+    /* ── Fundos (cinza-azulado frio, tipo papel técnico) ── */
+    --bg-root: #dde1e7; /* Canvas: cinza com leve tint azul */
+    --bg-panel: #eaecf0; /* Cards/painéis: cinza-azulado suave */
+    --bg-surface: #d4d8de; /* Superfícies internas */
+    --bg-inset: #c8ccd3; /* Insets (inputs, chart bg, timer) */
+    /* ── Bordas ── */
+    --border-subtle: #b8bdc6;
+    --border-mid: #a0a6b0;
+    /* ── Texto ── */
+    --text-primary: #1c2028; /* Azul-escuro quase preto */
+    --text-secondary: #4a5260;
+    --text-muted: #7a8090;
+    /* ── Accent (vermelho TSEA) ── */
+    --accent: #c8000a;
+    --accent-dim: rgba(200,0,10,.07);
+    --accent-border: #8a1020;
+    /* ── Verde ── */
+    --green: #135e1e;
+    --green-bg: rgba(19,94,30,.07);
+    --green-border: #1e6e2a;
+    /* ── Especiais ── */
+    --valve-open: #135e1e;
+    --valve-closed: #c8000a;
+    --timer-color: #1c2028;
+    --chart-line: #3a4050;
+    --gauge-bar: linear-gradient(to top, #a80010, #d81c26);
+    /* ── Toggle pastel ── */
+    --toggle-thumb-light: #f08080;
+    /* ── Role badge (engenheiro = vermelho) ── */
+    --role-badge-bg: rgba(200,0,10,.09);
+    --role-badge-border: rgba(200,0,10,.45);
+    --role-badge-text: #c8000a;
 }
 
     /* Ajuste adicional para textos pequenos e elementos com baixo contraste */
@@ -81,12 +97,11 @@
     [data-theme="light"] .btn-start {
         background-color: var(--green-bg);
         border: 1px solid var(--green-border);
-        color: #0a5a1a;
+        color: var(--green);
     }
 
         [data-theme="light"] .btn-start:hover {
-            background-color: rgba(26,110,42,0.15);
-            color: #0a4a14;
+            background-color: rgba(21,107,34,.14);
         }
 
     [data-theme="light"] .btn-relatorio {
@@ -101,13 +116,13 @@
         }
 
     [data-theme="light"] .btn-emergency {
-        background-color: rgba(208,0,10,0.07);
-        border: 1px solid #cc3340;
-        color: #cc0000;
+        background-color: var(--accent-dim);
+        border: 1px solid var(--accent-border);
+        color: var(--accent);
     }
 
         [data-theme="light"] .btn-emergency:hover {
-            background-color: var(--accent-border);
+            background-color: var(--accent);
             border-color: var(--accent);
             color: #ffffff;
         }
@@ -140,7 +155,7 @@
         [data-theme="light"] .mangueira-button.conectada {
             background-color: var(--accent-dim);
             border-color: var(--accent-border);
-            color: #cc3340;
+            color: var(--accent);
         }
 
     [data-theme="light"] .valve-visual svg rect {
@@ -161,17 +176,17 @@
 }
 
 body {
+    flex: 1;
     background-color: var(--bg-root);
     color: var(--text-primary);
-    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    font-family: 'IBM Plex Sans','Segoe UI',sans-serif;
     height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 10px 14px;
-    overflow: hidden;
+    padding: 8px 12px;
     transition: background-color .25s, color .25s;
 }
-
 /* ==========================================================================
    TOGGLE DE TEMA
    ========================================================================== */
@@ -210,7 +225,7 @@ body {
 
 [data-theme="light"] .theme-toggle-thumb {
     transform: translateX(15px);
-    background: var(--accent);
+    background: #555a62; /* cinza escuro */
 }
 
 /* TOP INFO */
@@ -1496,9 +1511,9 @@ body {
 }
 
 [data-theme="light"] .usuario-badge {
-    background-color: rgba(208,0,10,0.06);
+    background-color: var(--bg-panel);
     border-color: var(--border-mid);
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 [data-theme="light"] .header-panel {
@@ -1651,18 +1666,46 @@ body {
     border-color: var(--border-mid);
 }
 
-/* Válvulas no claro — SVG inline usa var() direto */
-[data-theme="light"] .valve-visual svg rect,
-[data-theme="light"] .valve-visual svg circle {
-    stroke: var(--text-muted);
+/* Válvulas no claro */
+[data-theme="light"] .valve-visual {
+    background-color: var(--bg-inset);
+    border-color: var(--border-subtle);
 }
 
-[data-theme="light"] .valve-visual svg line {
-    stroke: var(--text-muted);
+    [data-theme="light"] .valve-visual.aberta {
+        background-color: rgba(19,94,30,.06);
+        border-color: var(--green-border);
+    }
+
+    [data-theme="light"] .valve-visual.fechada {
+        background-color: rgba(200,0,10,.05);
+        border-color: rgba(200,0,10,.30);
+    }
+
+    [data-theme="light"] .valve-visual svg rect,
+    [data-theme="light"] .valve-visual svg circle {
+        stroke: var(--text-muted);
+    }
+
+    [data-theme="light"] .valve-visual svg line {
+        stroke: var(--text-muted);
+    }
+
+    [data-theme="light"] .valve-visual svg text {
+        fill: var(--text-primary);
+    }
+
+/* Status badge de válvula no claro */
+[data-theme="light"] .valve-status.off {
+    background-color: rgba(200,0,10,.07);
+    color: var(--accent);
+    border-color: rgba(200,0,10,.30);
 }
 
-[data-theme="light"] .valve-visual svg text {
-    fill: var(--text-primary);
+[data-theme="light"] .valve-status.on {
+    background-color: var(--green-bg);
+    color: var(--green);
+    border-color: var(--green-border);
 }
 
 [data-theme="light"] .valve-panel {
@@ -1714,6 +1757,6 @@ body {
 }
 
 [data-theme="light"] .op-emergency-banner {
-    background: rgba(208,0,10,0.07);
-    color: #cc0000;
+    background: var(--accent-dim);
+    color: var(--accent);
 }

@@ -20,30 +20,46 @@
     --valve-open: #4eca60;
     --valve-closed: #e20613;
     --timer-color: #eeeef2;
+    --chart-line: #c0c0d0;
     --gauge-bar: linear-gradient(to top,#c40510,#ff3d4a);
+    --role-badge-bg: rgba(78,202,96,.08);
+    --role-badge-border: #1a4220;
+    --role-badge-text: #4eca60;
+    /* Labels em dark */
+    --label-title: #eeeef2;
+    --label-section: rgba(255,255,255,0.85);
+    --label-status: rgba(255,255,255,0.6);
 }
 
 [data-theme="light"] {
-    --bg-root: #f5f2ef; /* O fundo cinza/creme da tela inteira */
-    --bg-panel: #ffffff; /* O fundo branco dos cards/painéis */
-    --bg-surface: #f0ede8;
-    --bg-inset: #e8e4de;
-    --border-subtle: #d6d0c8;
-    --border-mid: #c2bbb2;
-    --text-primary: #2a2520;
-    --text-secondary: #6b6359;
-    --text-muted: #9c958c;
-    --accent: #ff1e27; /* Mantém o vermelho do operador para os destaques */
-    --accent-dim: rgba(255,30,39,.08);
-    --accent-border: #aa0018;
-    --green: #1a6e2a;
-    --green-bg: rgba(26,110,42,0.06);
-    --green-border: #2a7e3a;
-    --valve-open: #1a6e2a;
-    --valve-closed: #ff1e27;
-    --timer-color: #2a2520;
-    --chart-line: #5a5550;
-    --gauge-bar: linear-gradient(to top, #ff1e27, #ff3d4a);
+    --bg-root: #dde1e7;
+    --bg-panel: #eaecf0;
+    --bg-surface: #d4d8de;
+    --bg-inset: #c8ccd3;
+    --border-subtle: #b8bdc6;
+    --border-mid: #a0a6b0;
+    --text-primary: #1c2028;
+    --text-secondary: #2a3040;
+    --text-muted: #3a4050;
+    --accent: #c8000a;
+    --accent-dim: rgba(200,0,10,.07);
+    --accent-border: #8a1020;
+    --green: #0d5c1e;
+    --green-bg: rgba(13,92,30,.10);
+    --green-border: #0d5c1e;
+    --valve-open: #0d5c1e;
+    --valve-closed: #c8000a;
+    --timer-color: #1c2028;
+    --chart-line: #1c2028;
+    --gauge-bar: linear-gradient(to top, #a80010, #d81c26);
+    --toggle-thumb-light: #f08080;
+    --role-badge-bg: rgba(13,92,30,.10);
+    --role-badge-border: #0d5c1e;
+    --role-badge-text: #0a4818;
+    /* Labels em light — TUDO PRETO */
+    --label-title: #0a0c10;
+    --label-section: #0a0c10;
+    --label-status: #1c2028;
 }
 
 /* ============================================================
@@ -55,16 +71,79 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-root);
+    display: flex;
+    flex-direction: column;
+}
+
 body {
     background-color: var(--bg-root);
     color: var(--text-primary);
     font-family: 'IBM Plex Sans','Segoe UI',sans-serif;
     height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 10px 14px;
-    overflow: hidden;
+    padding: 8px 12px;
     transition: background-color .25s, color .25s;
+    /* ADICIONA: */
+    max-height: 100vh;
+}
+
+.dashboard-unificado {
+    display: grid;
+    grid-template-columns: minmax(500px, 1.3fr) minmax(500px, 1.3fr) 220px;
+    grid-template-rows: auto 300px;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.zona-central {
+    grid-column: 1;
+    grid-row: 1; /* só linha 1, não mais 1/3 */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.zona-valvulas {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.zona-oleo {
+    grid-column: 1; /* col 1, linha 2 — debaixo do gráfico */
+    grid-row: 2;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.zona-controles {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 12px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* ============================================================
@@ -74,36 +153,55 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-family: 'IBM Plex Mono',monospace;
-    margin-bottom: 6px;
+    color: #8888a0;
+    font-size: 9px;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 5px;
     padding: 0 2px;
     letter-spacing: .5px;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    gap: 4px;
+}
+
+[data-theme="light"] .top-info {
+    color: #3a4050;
+}
+
+.role-badge {
+    background-color: #2e2e35 !important;
+    border: 1px solid #4e4e62 !important;
+    color: #eeeef2 !important;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+}
+
+[data-theme="light"] .role-badge {
+    background-color: #1c2028 !important;
+    border-color: #3a4050 !important;
+    color: #eeeef2 !important;
 }
 
 .usuario-badge {
-    background-color: var(--accent-dim);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
+    background-color: #1e1e23 !important;
+    border: 1px solid #3a3a42 !important;
+    color: #b3b3b3 !important;
     padding: 3px 10px;
-    border-radius: 2px;
+    border-radius: 3px;
     font-size: 10px;
     letter-spacing: 1px;
-    font-family: 'IBM Plex Mono',monospace;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
 }
 
-/* badge de papel (OPERADOR) */
-.role-badge {
-    background-color: rgba(78,202,96,.08);
-    border: 1px solid #1a4220;
-    color: var(--green);
-    padding: 3px 10px;
-    border-radius: 2px;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    font-family: 'IBM Plex Mono',monospace;
-    font-weight: 700;
+[data-theme="light"] .usuario-badge {
+    background-color: #d4d8de !important;
+    border-color: #a0a6b0 !important;
+    color: #1c2028 !important;
 }
 
 /* ============================================================
@@ -119,6 +217,10 @@ body {
     font-size: 10px;
     font-family: 'IBM Plex Mono',monospace;
     letter-spacing: 1px;
+}
+
+[data-theme="light"] .theme-toggle {
+    color: #3a4050;
 }
 
 .theme-toggle-track {
@@ -144,7 +246,7 @@ body {
 
 [data-theme="light"] .theme-toggle-thumb {
     transform: translateX(15px);
-    background: var(--accent);
+    background: #555a62;
 }
 
 /* ============================================================
@@ -161,25 +263,42 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
-    margin-bottom: 8px;
+    padding: 8px 14px;
+    margin-bottom: 6px;
     border-left: 3px solid var(--accent);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.header-logo-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    height: 58px;
+    width: auto;
+    object-fit: contain;
 }
 
 .header-title {
     font-size: 13px;
     font-weight: 700;
-    letter-spacing: 3px;
     color: var(--text-primary);
+    letter-spacing: 3px;
     font-family: 'IBM Plex Mono',monospace;
 }
 
 .header-subtitle {
     font-size: 9px;
     letter-spacing: 2px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-family: 'IBM Plex Mono',monospace;
     margin-top: 2px;
+}
+
+[data-theme="light"] .header-title,
+[data-theme="light"] .header-subtitle {
+    color: #1c2028;
 }
 
 .btn-close {
@@ -207,111 +326,54 @@ body {
     }
 
 /* ============================================================
-   ABAS
+   SECTION TITLES — legíveis em ambos os temas
    ============================================================ */
-.tabs-container {
-    margin-bottom: 8px;
-}
-
-.tabs-nav {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.tab-button {
-    padding: 7px 18px;
-    background-color: transparent;
-    color: var(--text-muted);
-    border: none;
-    border-right: 1px solid var(--bg-inset);
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'IBM Plex Sans',sans-serif;
-    transition: all .15s;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    letter-spacing: 1.5px;
-}
-
-    .tab-button:hover {
-        color: var(--text-secondary);
-    }
-
-    .tab-button.active {
-        color: var(--text-primary);
-        border-bottom-color: var(--accent);
-    }
-
-.tab-content {
-    display: none;
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-}
-
-    .tab-content.active {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-    }
-
-/* ============================================================
-   ABA PRINCIPAL — layout simplificado (operador)
-   ============================================================ */
-.op-principal-grid {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 12px;
-    flex: 1;
-    min-height: 0;
-    height: 100%;
-    padding: 2px 0;
-}
-
-/* Painel esquerdo */
-.op-left-panel {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-}
-
 .section-title {
-    color: var(--text-muted);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2.5px;
+    color: var(--label-section) !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px;
     text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
 }
 
 .divider {
     border: none;
     border-top: 1px solid var(--border-subtle);
-    margin: 2px 0;
+    margin: 3px 0;
 }
 
-/* Status items */
+/* ============================================================
+   STATUS ITEMS
+   ============================================================ */
 .status-item {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
 }
 
-.status-label {
-    color: var(--text-muted);
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    font-weight: 700;
+.status-label, .timer-label, .tempo-restante-box .label {
+    color: var(--label-status) !important;
+    font-size: 9px !important;
+    letter-spacing: 1px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+[data-theme="light"] .status-label,
+[data-theme="light"] .timer-label {
+    color: #1c2028 !important;
 }
 
 .status-value {
-    font-size: 13px;
+    font-size: 15px !important;
     font-weight: 700;
-    letter-spacing: 1px;
-    font-family: 'IBM Plex Mono',monospace;
+    color: var(--label-title);
+    display: block;
+    margin-top: 1px;
+    font-family: 'IBM Plex Mono', monospace;
 }
 
     .status-value.on {
@@ -322,28 +384,44 @@ body {
         color: var(--accent);
     }
 
-/* Timer */
+[data-theme="light"] .status-value {
+    color: #0a0c10 !important;
+}
+
+    [data-theme="light"] .status-value.off {
+        color: var(--accent) !important;
+    }
+
+/* ============================================================
+   TIMER
+   ============================================================ */
 .timer-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 14px 10px;
+    gap: 3px;
+    padding: 10px 8px;
     background-color: var(--bg-inset);
     border-radius: 4px;
     border: 1px solid var(--border-subtle);
     margin-top: auto;
+    flex-shrink: 0;
 }
 
 .timer-label {
-    color: var(--text-muted);
-    font-size: 8px;
-    letter-spacing: 2px;
+    color: var(--label-status) !important;
+    font-size: 9px;
+    letter-spacing: 1.5px;
     font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+[data-theme="light"] .timer-label {
+    color: #1c2028 !important;
 }
 
 .timer-value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     color: var(--timer-color);
     font-family: 'IBM Plex Mono',monospace;
@@ -351,52 +429,120 @@ body {
     line-height: 1;
 }
 
+[data-theme="light"] .timer-value {
+    color: #0a0c10;
+}
+
 .timer-limit {
     font-size: 9px;
     color: var(--accent);
     font-family: 'IBM Plex Mono',monospace;
     letter-spacing: 1px;
-    min-height: 12px;
+    min-height: 11px;
 }
 
-/* Botões */
+/* ============================================================
+   BOTÕES
+   ============================================================ */
 .button-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin-top: 4px;
+    flex-shrink: 0;
 }
 
 .btn {
-    padding: 10px 12px;
+    padding: 12px 16px;
     border: none;
     border-radius: 4px;
     font-weight: 700;
     cursor: pointer;
     transition: all .15s;
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 1.5px;
     font-family: 'IBM Plex Sans',sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
-.btn-emergency {
-    background-color: rgba(226,6,19,.07);
-    color: #ff7070;
-    border: 1px solid var(--accent-border);
+/* BOTÃO INICIAR — cinza neutro → verde ao habilitar */
+.btn-start {
+    background-color: #3a3a45 !important;
+    color: #c0c0cc !important;
+    border: 1px solid #505060 !important;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 2px;
+    transition: background-color .2s, color .2s, box-shadow .2s, border-color .2s;
 }
 
-    .btn-emergency:hover {
-        background-color: var(--accent-border);
-        color: #fff;
+    .btn-start:disabled {
+        background-color: #3a3a45 !important;
+        color: #8888a0 !important;
+        border: 1px solid #505060 !important;
+        cursor: not-allowed;
+        opacity: 1;
     }
 
-.btn-emergency-ativa {
-    background-color: var(--accent) !important;
-    color: #fff !important;
-    border-color: #ff3d4a !important;
-    animation: pulseEmergencia 1.2s ease-in-out infinite;
+    .btn-start:not(:disabled):not(.iniciado) {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 2px solid #ffffff !important;
+        cursor: pointer;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        font-weight: 800;
+    }
+
+        .btn-start:not(:disabled):not(.iniciado):hover {
+            background-color: #e0e0e0 !important;
+        }
+
+    .btn-start.iniciado {
+        background-color: #22c54e !important;
+        color: #1aa13a !important;
+        border: 1px solid #1aa13a !important;
+        box-shadow: 0 0 14px rgba(34,197,78,.4);
+        cursor: default;
+    }
+
+[data-theme="light"] .btn-start:disabled {
+    background-color: #c0c4cc !important;
+    color: #8a8fa0 !important;
+    border-color: #a0a6b0 !important;
 }
-/* Emergência bloqueada — cor diferente, indica aguardando liberação */
+
+/* BOTÃO EMERGÊNCIA */
+.btn-emergency {
+    background-color: #ff0011 !important;
+    color: #ffffff !important;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    height: 80px;
+    width: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V10h2v2z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 28px center;
+    background-size: 22px;
+    padding-left: 55px;
+    border: 2px solid #b3000c;
+    border-radius: 6px;
+}
+
+    .btn-emergency:disabled {
+        opacity: 0.4 !important;
+        cursor: not-allowed;
+    }
+
+    .btn-emergency:not(:disabled):hover {
+        background-color: #ff2233 !important;
+        box-shadow: 0 0 15px rgba(255,0,17,.5);
+    }
+
 .btn-emergency-aguardando {
     background-color: rgba(255,160,0,.10) !important;
     color: #ffb020 !important;
@@ -407,22 +553,36 @@ body {
 
 @keyframes pulseEmergencia {
     0%,100% {
-        opacity: 1
+        opacity: 1;
     }
 
     50% {
-        opacity: .58
+        opacity: .58;
     }
 }
 
-/* Painel central — gráfico da rampa */
-.op-center-panel {
-    padding: 16px 18px;
+.btn-confirm-start {
+    background-color: var(--green-bg) !important;
+    border: 1px solid var(--green-border) !important;
+    color: var(--green) !important;
+}
+
+    .btn-confirm-start:hover {
+        background-color: rgba(78,202,96,.18) !important;
+        color: #80ee90 !important;
+    }
+
+/* ============================================================
+   ZONA CENTRAL — GRÁFICO
+   ============================================================ */
+.chart-panel-unificado {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    padding: 12px 14px;
+    gap: 8px;
     min-height: 0;
-    gap: 12px;
+    position: relative !important;
 }
 
 .chart-header {
@@ -430,20 +590,28 @@ body {
 }
 
 .chart-title {
-    color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
+    color: var(--label-section);
     letter-spacing: 2px;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+}
+
+[data-theme="light"] .chart-title {
+    color: #0a0c10;
 }
 
 .chart-main-value {
-    font-size: 34px;
+    font-size: 30px;
     font-weight: 700;
     color: var(--text-primary);
     font-family: 'IBM Plex Mono',monospace;
     letter-spacing: -1px;
     line-height: 1;
+}
+
+[data-theme="light"] .chart-main-value {
+    color: #0a0c10;
 }
 
 .chart-unit {
@@ -453,54 +621,69 @@ body {
     margin-left: 4px;
 }
 
+[data-theme="light"] .chart-unit {
+    color: #3a4050;
+}
+
 .chart-container {
     flex: 1;
+    min-height: 250px;
     position: relative;
-    min-height: 0;
     background-color: var(--bg-inset);
     border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    padding: 10px;
+    padding: 8px;
 }
 
-/* Fase badge abaixo do valor */
+/* FASE BADGE */
 .fase-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
+    position: absolute !important;
+    top: 12px;
+    right: 14px;
+    background-color: #2e2e35 !important;
+    border: 1px solid #4e4e62 !important;
+    color: #ffffff !important;
+    padding: 5px 12px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase;
+    z-index: 10;
     font-family: 'IBM Plex Mono',monospace;
-    background-color: var(--bg-surface);
-    border: 1px solid var(--border-mid);
-    color: var(--text-secondary);
-    align-self: flex-start;
 }
 
     .fase-badge.succao {
-        background-color: rgba(78,202,96,.07);
-        border-color: #1a4220;
-        color: var(--green);
+        background-color: rgba(78,202,96,.15) !important;
+        border-color: #22c54e !important;
+        color: #4eca60 !important;
     }
 
     .fase-badge.estavel {
-        background-color: var(--accent-dim);
-        border-color: var(--accent-border);
-        color: #ff7070;
+        background-color: rgba(226,6,19,.15) !important;
+        border-color: #ff0011 !important;
+        color: #ff7070 !important;
     }
 
     .fase-badge.aguard {
-        color: var(--text-muted);
+        color: #cccccc !important;
     }
 
-/* Indicadores simples na parte inferior do painel central */
+[data-theme="light"] .fase-badge {
+    background-color: #1c2028 !important;
+    border-color: #3a4050 !important;
+    color: #eeeef2 !important;
+}
+
+    [data-theme="light"] .fase-badge.aguard {
+        color: #eeeef2 !important;
+    }
+
+/* MÉTRICAS DE TUBO */
 .op-metrics-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3,1fr);
+    gap: 6px;
     flex-shrink: 0;
 }
 
@@ -508,17 +691,22 @@ body {
     background-color: var(--bg-inset);
     border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .op-metric-label {
-    color: var(--text-muted);
-    font-size: 8px;
+    color: var(--label-section);
+    font-size: 9px;
     letter-spacing: 1.5px;
     font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+[data-theme="light"] .op-metric-label {
+    color: #0a0c10;
 }
 
 .op-metric-value {
@@ -529,223 +717,325 @@ body {
     line-height: 1;
 }
 
+[data-theme="light"] .op-metric-value {
+    color: #0a0c10;
+}
+
 .op-metric-unit {
     color: var(--text-muted);
     font-size: 9px;
     font-family: 'IBM Plex Mono',monospace;
 }
 
-/* ============================================================
-   ABA VÁLVULAS
-   ============================================================ */
-.valves-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 12px;
-    padding: 12px;
-    overflow-y: auto;
-    flex: 1;
+[data-theme="light"] .op-metric-unit {
+    color: #3a4050;
 }
 
-.valve-panel {
-    padding: 14px;
+/* ============================================================
+   VÁLVULAS — MAIORES E MAIS DESTAQUE
+   ============================================================ */
+.valve-compacta {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px;
+    padding: 7px 10px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
-.valve-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-    .valve-header h3 {
-        font-size: 11px;
-        color: var(--text-secondary);
-        letter-spacing: 2px;
-        font-weight: 700;
-    }
-
-.valve-status {
-    padding: 3px 10px;
-    border-radius: 2px;
-    font-size: 9px;
+.valve-num {
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 1px;
-    font-family: 'IBM Plex Mono',monospace;
+    color: var(--label-title);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
 }
 
-    .valve-status.on {
-        background-color: var(--green-bg);
-        color: var(--green);
-        border: 1px solid var(--green-border);
-    }
+[data-theme="light"] .valve-num {
+    color: #0a0c10;
+}
 
-    .valve-status.off {
-        background-color: var(--accent-dim);
-        color: #ff7070;
-        border: 1px solid var(--accent-border);
-    }
+.valve-content-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+}
 
-.valve-visual {
+/* SVG MAIOR para dar mais destaque */
+.valve-visual-modern {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 190px;
-    background-color: var(--bg-inset);
-    border-radius: 4px;
-    border: 1px solid var(--border-subtle);
-    transition: border-color .3s, background-color .3s;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
 }
-    /* Coloração dinâmica da caixa ao redor da válvula */
-    .valve-visual.aberta {
-        border-color: var(--green-border);
-        background-color: rgba(78,202,96,.04);
+
+.valve-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.valve-handle, .valve-body-circle {
+    fill: var(--bg-inset);
+    stroke: var(--border-mid);
+    stroke-width: 2;
+    transition: stroke 0.2s ease;
+}
+
+.valve-neck {
+    fill: var(--border-subtle);
+    transition: fill 0.2s ease;
+}
+
+.valve-center-text {
+    font-size: 13px;
+    font-weight: 700;
+    fill: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+    transition: fill 0.2s ease;
+}
+
+/* SVG VERDE quando ABERTA */
+.valve-compacta:has(.servo-button.aberto) .valve-handle,
+.valve-compacta:has(.servo-button.aberto) .valve-body-circle {
+    stroke: #22c54e !important;
+}
+
+.valve-compacta:has(.servo-button.aberto) .valve-neck,
+.valve-compacta:has(.servo-button.aberto) .valve-center-text {
+    fill: #22c54e !important;
+}
+
+/* MODO CLARO: verde escuro de alto contraste */
+[data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-handle,
+[data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-body-circle {
+    stroke: #0d6b28 !important;
+}
+
+[data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-neck,
+[data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-center-text {
+    fill: #22c54e !important;
+}
+
+/* SVG VERMELHO quando FECHADA */
+.valve-compacta:has(.servo-button.fechado) .valve-handle,
+.valve-compacta:has(.servo-button.fechado) .valve-body-circle {
+    stroke: #ff0011 !important;
+}
+
+.valve-compacta:has(.servo-button.fechado) .valve-neck,
+.valve-compacta:has(.servo-button.fechado) .valve-center-text {
+    fill: #ff0011 !important;
+}
+
+/* Alavanca */
+.valve-handle {
+    transform-origin: 50px 15px;
+    transform: rotate(0deg);
+    transition: transform 0.4s ease;
+}
+
+.valve-compacta:has(.servo-button.aberto) .valve-handle {
+    transform: rotate(-40deg);
+}
+
+/* Dados da válvula */
+.valve-data-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+}
+
+.data-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-inset);
+    border: 3px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 5px 8px;
+    min-height: 28px;
+}
+
+    .data-field .data-label {
+        font-size: 5px;
+        font-weight: 600;
+        color: var(--label-section);
+        font-family: 'IBM Plex Sans', sans-serif;
+        letter-spacing: 0.5px;
     }
 
-    .valve-visual.fechada {
-        border-color: var(--accent-border);
-        background-color: rgba(226,6,19,.04);
-    }
+[data-theme="light"] .data-field .data-label {
+    color: #1c2028;
+}
 
-    .valve-visual svg {
-        width: 100%;
-        height: 100%;
-        max-width: 120px;
-    }
+.data-field .data-value {
+    font-size: 5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+}
 
-        .valve-visual svg rect {
-            stroke: var(--valve-open) !important;
-            transition: stroke .3s;
-        }
+[data-theme="light"] .data-field .data-value {
+    color: #0a0c10;
+}
 
-        .valve-visual svg circle {
-            stroke: var(--text-secondary) !important;
-            fill: var(--bg-panel) !important;
-        }
-
-        .valve-visual svg text {
-            fill: var(--valve-open) !important;
-            transition: fill .3s;
-        }
-
-        .valve-visual svg line {
-            stroke: var(--valve-open) !important;
-            transition: stroke .3s;
-        }
-
-/* Botão servo — verde quando aberto, vermelho quando fechado */
 .servo-button {
-    padding: 10px 12px;
+    width: 100%;
+    padding: 6px 0;
     border-radius: 4px;
     cursor: pointer;
     font-size: 10px;
     font-family: 'IBM Plex Sans',sans-serif;
     transition: all .2s;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: auto;
     border: 1px solid var(--border-subtle);
     background-color: var(--bg-inset);
     color: var(--text-secondary);
+    flex-shrink: 0;
 }
-    /* Estado aberto */
+
     .servo-button.aberto {
-        background-color: var(--green-bg) !important;
-        border-color: var(--green-border) !important;
-        color: var(--green) !important;
+        background-color: #22c54e !important;
+        color: #ffffff !important;
+        border: 1px solid #1aa13a !important;
+        box-shadow: 0 0 10px rgba(34,197,78,.2);
     }
 
         .servo-button.aberto:hover {
-            background-color: rgba(78,202,96,.14) !important;
-        }
-    /* Estado fechado */
-    .servo-button.fechado {
-        background-color: var(--accent-dim) !important;
-        border-color: var(--accent-border) !important;
-        color: #ff7070 !important;
-    }
-
-        .servo-button.fechado:hover {
-            background-color: rgba(226,6,19,.15) !important;
+            background-color: #1aa13a !important;
         }
 
-.valve-info {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 11px;
+[data-theme="light"] .servo-button.aberto {
+    background-color: #0d6b28 !important;
+    border-color: #084d1c !important;
+    box-shadow: none;
 }
 
-    .valve-info p {
-        display: flex;
-        justify-content: space-between;
-        padding-bottom: 6px;
-        border-bottom: 1px solid var(--border-subtle);
+    [data-theme="light"] .servo-button.aberto:hover {
+        background-color: #084d1c !important;
     }
 
-        .valve-info p:last-child {
-            border-bottom: none;
-        }
+.servo-button.fechado {
+    background-color: #ff0011 !important;
+    color: #ffffff !important;
+    border: 1px solid #b3000c !important;
+}
 
-    .valve-info span {
-        color: var(--text-muted);
-        font-size: 10px;
-        letter-spacing: .5px;
-    }
-
-    .valve-info strong {
-        color: var(--text-primary);
-        font-family: 'IBM Plex Mono',monospace;
-        font-size: 11px;
+    .servo-button.fechado:hover {
+        background-color: #d6000e !important;
     }
 
 /* ============================================================
-   ABA ÓLEO — simplificada
+   PAINEL ÓLEO
    ============================================================ */
-.op-oleo-grid {
+.oleo-grid-unificado {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    flex: 1;
-    min-height: 0;
-    padding: 12px;
-    align-items: start;
-}
-
-/* Tanque */
-.op-oleo-tank-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    padding: 20px 16px;
-}
-
-.op-oleo-tank-title {
-    color: var(--text-muted);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    align-self: flex-start;
-}
-
-.tank-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.tank {
-    position: relative;
-    width: 120px;
-    height: 260px;
-    border: 3px solid #ff3b3b;
-    border-radius: 18px;
+    grid-template-columns: 220px 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 20px;
+    height: 100%;
+    width: 100%;
     overflow: hidden;
-    background: var(--bg-inset);
+    align-items: stretch;
+    min-height: 0;
+}
+
+.oleo-indicators-section {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+    .oleo-indicators-section .op-oleo-ind {
+        padding: 8px 12px;
+        background-color: var(--bg-inset);
+        border: 1px solid var(--border-subtle);
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .oleo-indicators-section .op-oleo-ind-label {
+        font-size: clamp(10px, 1vw, 12px);
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--label-section);
+        font-family: 'IBM Plex Mono', monospace;
+    }
+
+[data-theme="light"] .op-oleo-ind-label,
+[data-theme="light"] .oleo-indicators-section .op-oleo-ind .op-oleo-ind-label {
+    color: #0a0c10 !important;
+}
+
+.oleo-indicators-section .op-oleo-ind-val {
+    font-size: clamp(16px, 1.8vw, 22px);
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .op-oleo-ind-val {
+    color: #0a0c10;
+}
+
+.oleo-tank-section {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+    .oleo-tank-section .section-title {
+        text-align: center;
+        width: 100%;
+        color: var(--label-section) !important;
+    }
+
+[data-theme="light"] .oleo-tank-section .section-title {
+    text-align: center;
+    width: 100%;
+    color: #0a0c10 !important;
+}
+
+.oleo-tank-section .tank {
+    width: clamp(70px, 8vw, 110px);
+    height: clamp(100px, 18vh, 200px);
+    flex-shrink: 0;
+}
+
+.oleo-tank-section #oilPercent {
+    font-size: 25px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: center;
+    width: 100%;
+    color: #ff0011;
+    margin-top: 2px;
 }
 
 #oilFill {
@@ -753,7 +1043,7 @@ body {
     bottom: 0;
     width: 100%;
     height: 0%;
-    background: linear-gradient(to top,#6b0000,#bd0202);
+    background: #bd0202;
     transition: height 1s ease, background 1s ease;
 }
 
@@ -764,96 +1054,56 @@ body {
     pointer-events: none;
 }
 
-#oilPercent {
-    color: #ff4a4a;
-    font-size: 30px;
-    font-weight: 700;
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-/* Indicadores ao lado do tanque */
-.op-oleo-indicators {
+.oleo-status-section {
+    grid-column: 3;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    padding: 0 8px;
+    justify-content: center;
+    gap: 6px;
+    overflow: hidden;
 }
 
-.op-oleo-ind {
-    background-color: var(--bg-inset);
-    border: 1px solid var(--border-subtle);
-    border-radius: 4px;
-    padding: 10px 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.op-oleo-ind-label {
-    color: var(--text-muted);
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    font-weight: 700;
-}
-
-.op-oleo-ind-val {
-    font-size: 18px;
-    font-weight: 700;
-    font-family: 'IBM Plex Mono',monospace;
-    color: var(--text-primary);
-}
-
-.op-oleo-ind-unit {
-    color: var(--text-muted);
-    font-size: 10px;
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-/* Painel direito do óleo — status simples */
-.op-oleo-status-panel {
-    padding: 20px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* Barra de nível simplificada (substitui o gráfico de temperatura) */
 .op-nivel-bar-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
 }
 
 .op-nivel-bar-label {
-    color: var(--text-muted);
-    font-size: 9px;
-    letter-spacing: 2px;
+    color: var(--label-section);
+    font-size: 13px;
+    letter-spacing: 1.5px;
     font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
     margin-bottom: 2px;
+}
+
+[data-theme="light"] .op-nivel-bar-label {
+    color: #0a0c10;
 }
 
 .op-nivel-bar-track {
     width: 100%;
-    height: 28px;
+    height: 18px;
     background-color: var(--bg-inset);
     border: 1px solid var(--border-subtle);
     border-radius: 4px;
-    overflow: hidden;
     position: relative;
+    overflow: hidden;
 }
 
 .op-nivel-bar-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(to right,#6b0000,#e20613);
+    background: linear-gradient(to right,#e20613);
     transition: width 1s ease;
     border-radius: 3px;
 }
 
 .op-nivel-bar-val {
     position: absolute;
-    right: 10px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 11px;
@@ -862,33 +1112,37 @@ body {
     color: var(--text-primary);
 }
 
-/* Semáforo de status do óleo */
+[data-theme="light"] .op-nivel-bar-val {
+    color: #eeeef2;
+}
+
 .op-oleo-semaforo {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 6px;
+    gap: 4px;
 }
 
 .op-sema-item {
+    padding: 7px 10px;
+    font-size: 13px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 8px;
     border-radius: 4px;
     background-color: var(--bg-inset);
     border: 1px solid var(--border-subtle);
-    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 1px;
-    font-family: 'IBM Plex Mono',monospace;
-    color: var(--text-muted);
-    transition: all .3s;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-secondary);
+}
+
+[data-theme="light"] .op-sema-item {
+    color: #1c2028;
 }
 
 .op-sema-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background-color: var(--border-mid);
     flex-shrink: 0;
@@ -925,421 +1179,96 @@ body {
         background-color: var(--accent);
     }
 
-/* ============================================================
-   MODAIS
-   ============================================================ */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(5,5,8,.90);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    backdrop-filter: blur(6px);
+.oleo-chart-section {
+    display: none !important;
 }
-
-    .modal-overlay.hidden {
-        display: none;
-    }
-
-.modal-content {
-    background-color: var(--bg-panel);
-    border: 1px solid var(--border-mid);
-    padding: 36px;
-    border-radius: 6px;
-    text-align: center;
-    max-width: 340px;
-    width: 90%;
-    box-shadow: 0 32px 80px rgba(0,0,0,.7);
-}
-
-.modal-logo {
-    font-family: 'IBM Plex Mono',monospace;
-    font-size: 11px;
-    letter-spacing: 4px;
-    color: var(--accent);
-    margin-bottom: 14px;
-    font-weight: 700;
-}
-
-.modal-content h2 {
-    font-size: 15px;
-    margin-bottom: 8px;
-    color: var(--text-primary);
-    letter-spacing: 2px;
-    font-weight: 700;
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-.modal-content p {
-    color: var(--text-muted);
-    margin-bottom: 20px;
-    font-size: 11px;
-    letter-spacing: .5px;
-}
-
-#inputId {
-    width: 100%;
-    padding: 13px 14px;
-    background-color: var(--bg-inset);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
-    border-radius: 4px;
-    font-size: 18px;
-    margin-bottom: 14px;
-    transition: border-color .2s,box-shadow .2s;
-    text-transform: uppercase;
-    letter-spacing: 5px;
-    text-align: center;
-    font-family: 'IBM Plex Mono',monospace;
-    font-weight: 700;
-    outline: none;
-}
-
-    #inputId:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 2px var(--accent-dim);
-    }
-
-    #inputId:disabled {
-        opacity: .5;
-        cursor: not-allowed;
-    }
-
-.btn-modal {
-    background-color: rgba(226,6,19,.08) !important;
-    color: #ff7070 !important;
-    border: 1px solid var(--accent-border) !important;
-    width: 100%;
-    padding: 12px !important;
-    margin-bottom: 12px;
-    font-size: 10px !important;
-    letter-spacing: 2px;
-    position: relative;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all .15s;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-    .btn-modal:hover:not(:disabled) {
-        background-color: var(--accent-border) !important;
-        color: #fff !important;
-    }
-
-    .btn-modal:disabled {
-        cursor: not-allowed;
-        opacity: .75;
-    }
-
-.btn-spinner {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255,112,112,.3);
-    border-top-color: #ff7070;
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-    flex-shrink: 0;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.error-msg {
-    background-color: var(--accent-dim);
-    border-left: 2px solid var(--accent);
-    color: #ff7070;
-    padding: 10px 12px;
-    border-radius: 2px;
-    font-size: 10px;
-    display: none;
-    text-align: left;
-    letter-spacing: .3px;
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-    .error-msg.show {
-        display: block;
-    }
-
-.modal-confirm {
-    background-color: var(--bg-panel);
-    border: 1px solid var(--border-mid);
-    padding: 32px 28px;
-    border-radius: 6px;
-    text-align: center;
-    max-width: 360px;
-    width: 90%;
-    box-shadow: 0 32px 80px rgba(0,0,0,.7);
-    animation: modalIn .15s ease;
-}
-
-@keyframes modalIn {
-    from {
-        opacity: 0;
-        transform: scale(.97) translateY(-8px)
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0)
-    }
-}
-
-.modal-confirm-icon {
-    width: 40px;
-    height: 40px;
-    border: 2px solid var(--accent-border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--accent);
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-.modal-confirm h3 {
-    font-size: 14px;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    font-family: 'IBM Plex Mono',monospace;
-}
-
-.modal-confirm p {
-    font-size: 11px;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    line-height: 1.6;
-    letter-spacing: .3px;
-}
-
-.modal-confirm-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-confirm-cancel {
-    flex: 1;
-    padding: 10px;
-    background-color: var(--bg-inset);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'IBM Plex Sans',sans-serif;
-    transition: all .15s;
-    letter-spacing: 1px;
-}
-
-    .btn-confirm-cancel:hover {
-        background-color: var(--bg-surface);
-        color: var(--text-secondary);
-        border-color: var(--border-mid);
-    }
-
-.btn-confirm-ok {
-    flex: 1;
-    padding: 10px;
-    background-color: rgba(226,6,19,.08);
-    border: 1px solid var(--accent-border);
-    color: #ff7070;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'IBM Plex Sans',sans-serif;
-    transition: all .15s;
-    letter-spacing: 1px;
-}
-
-    .btn-confirm-ok:hover {
-        background-color: var(--accent-border);
-        color: #fff;
-    }
-
-/* Modal de aguardando liberação */
-.modal-confirm-warn {
-    border-color: rgba(255,176,32,.4) !important;
-}
-
-    .modal-confirm-warn .modal-confirm-icon {
-        border-color: rgba(255,176,32,.5);
-        color: #ffb020;
-    }
-
-    .modal-confirm-warn h3 {
-        color: #ffb020;
-    }
 
 /* ============================================================
-   RESPONSIVO
+   TUBOS (MANGUEIRAS) — no painel de controles
    ============================================================ */
-@media (max-width: 900px) {
-    .op-principal-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .op-oleo-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .op-metrics-row {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-/* Botão INICIAR */
-.btn-start {
-    background-color: var(--green-bg);
-    color: var(--green);
-    border: 1px solid var(--green-border);
-}
-
-    .btn-start:hover:not(:disabled) {
-        background-color: rgba(78,202,96,.14);
-        color: #72e882;
-    }
-
-    .btn-start:disabled {
-        background-color: var(--bg-inset);
-        cursor: not-allowed;
-        color: var(--text-muted);
-        border: 1px solid var(--border-subtle);
-        opacity: .5;
-    }
-
-/* Botão confirmar verde (modal timer e tempo encerrado) */
-.btn-confirm-start {
-    background-color: var(--green-bg) !important;
-    border-color: var(--green-border) !important;
-    color: var(--green) !important;
-}
-
-    .btn-confirm-start:hover {
-        background-color: rgba(78,202,96,.18) !important;
-        color: #80ee90 !important;
-    }
-
-/* Tema claro — btn-start */
-[data-theme="light"] .btn-start {
-    background-color: rgba(26,110,42,.10);
-    border-color: var(--green-border);
-    color: #0a5a1a;
-}
-
-    [data-theme="light"] .btn-start:hover:not(:disabled) {
-        background-color: rgba(26,110,42,.18);
-    }
-
-[data-theme="light"] .btn-confirm-start {
-    background-color: rgba(26,110,42,.10) !important;
-    border-color: var(--green-border) !important;
-    color: var(--green) !important;
-}
-
-/* header-subtitle — faltava no operador_style.css */
-.header-subtitle {
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-    margin-top: 2px;
-}
-
-[data-theme="light"] .header-subtitle {
-    color: var(--text-secondary);
-}
-
-/* =============================================
-   MANGUEIRA BUTTONS (tubos) — faltavam no operador
-   ============================================= */
 .mangueira-button {
-    padding: 9px 12px;
+    padding: 10px 14px 10px 32px;
     background-color: var(--bg-inset);
     border: 1px solid var(--border-subtle);
-    color: var(--text-muted);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 11px;
-    font-family: 'IBM Plex Sans', sans-serif;
-    transition: all .15s;
-    font-weight: 500;
-    text-align: left;
-    letter-spacing: .3px;
-    position: relative;
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 4px;
+    transition: all 0.2s ease;
 }
 
     .mangueira-button::before {
         content: '';
-        display: inline-block;
-        width: 6px;
-        height: 6px;
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        background-color: var(--border-mid);
-        flex-shrink: 0;
-        transition: background-color .15s;
+        background-color: #4a4f57;
+        transition: all 0.2s ease;
     }
 
-    .mangueira-button:hover {
-        background-color: var(--bg-surface);
-        border-color: var(--border-mid);
+    .mangueira-button .tubo-nome {
+        font-family: 'IBM Plex Sans', sans-serif;
+        font-size: 12px;
+        font-weight: 600;
         color: var(--text-secondary);
     }
 
-    .mangueira-button.conectada {
-        background-color: var(--accent-dim);
-        border-color: var(--accent-border);
-        color: #ff7070;
-    }
-
-        .mangueira-button.conectada::before {
-            background-color: var(--accent);
-        }
-
-        .mangueira-button.conectada:hover {
-            background-color: rgba(226,6,19,.13);
-            border-color: #801218;
-        }
-
-[data-theme="light"] .mangueira-button {
-    background-color: #ffffff;
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Sombra sutil para dar volume */
+[data-theme="light"] .mangueira-button .tubo-nome {
+    color: #1c2028;
 }
 
-    [data-theme="light"] .mangueira-button:hover {
-        border-color: var(--border-mid);
-        background-color: var(--bg-surface);
+.mangueira-button .tubo-status {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+}
+
+.mangueira-button:hover {
+    background-color: var(--bg-surface);
+    border-color: var(--border-mid);
+}
+
+/* ARIA conectado */
+.mangueira-button[aria-pressed="true"] {
+    background-color: rgba(78,202,96,0.06) !important;
+    border-color: #2e7d32 !important;
+}
+
+    .mangueira-button[aria-pressed="true"]::before {
+        background-color: #4eca60 !important;
+        box-shadow: 0 0 8px rgba(78,202,96,.8);
     }
 
-    [data-theme="light"] .mangueira-button.conectada {
-        background-color: var(--accent-dim);
-        border-color: var(--accent);
-        color: var(--accent);
+    .mangueira-button[aria-pressed="true"] .tubo-nome {
+        color: #ffffff !important;
+    }
+
+    .mangueira-button[aria-pressed="true"] .tubo-status::after {
+        content: 'Conectado' !important;
+        color: #4eca60 !important;
         font-weight: 700;
     }
 
+.mangueira-button[aria-pressed="false"] .tubo-status::after {
+    content: 'Desconectado';
+    color: var(--text-muted);
+}
+
+[data-theme="light"] .mangueira-button[aria-pressed="false"] .tubo-status::after {
+    color: #5a6070;
+}
+
+/* ============================================================
+   DRUM PICKER
+   ============================================================ */
 .drum-picker-group {
     display: flex;
     align-items: flex-end;
@@ -1459,135 +1388,640 @@ body {
     margin-bottom: 14px;
 }
 
-[data-theme="light"] .drum-wrapper {
+/* ============================================================
+   MODAIS — corrigidos e responsivos
+   ============================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(5,5,8,.92);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(6px);
+    padding: 20px;
+}
+
+    .modal-overlay.hidden {
+        display: none;
+    }
+
+.modal-content {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    padding: 32px 28px;
+    border-radius: 6px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
+}
+
+.modal-logo {
+    font-family: 'IBM Plex Mono',monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 14px;
+    font-weight: 700;
+}
+
+.modal-content h2 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    letter-spacing: 2px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono',monospace;
+}
+
+.modal-content p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-size: 11px;
+    letter-spacing: .5px;
+}
+
+[data-theme="light"] .modal-content h2 {
+    color: #0a0c10;
+}
+
+[data-theme="light"] .modal-content p {
+    color: #2a3040;
+}
+
+.btn-modal {
+    background-color: rgba(226,6,19,.08) !important;
+    color: #ff7070 !important;
+    border: 1px solid var(--accent-border) !important;
+    width: 100%;
+    padding: 12px !important;
+    margin-bottom: 10px;
+    font-size: 11px !important;
+    letter-spacing: 2px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all .15s;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+    .btn-modal:hover:not(:disabled) {
+        background-color: var(--accent-border) !important;
+        color: #fff !important;
+    }
+
+/* Modal confirm — CORRIGIDO */
+.modal-confirm {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    padding: 28px 24px;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
+    animation: modalIn .15s ease;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(.97) translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-confirm-icon {
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--border-mid);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono',monospace;
     background-color: var(--bg-inset);
-    border-color: var(--border-mid);
 }
 
-[data-theme="light"] .drum-item {
+    /* Ícone de sucesso (✓) verde */
+    .modal-confirm-icon.icon-ok {
+        border-color: #22c54e;
+        color: #22c54e;
+        background-color: rgba(34,197,78,.08);
+    }
+
+    /* Ícone de emergência (!) vermelho */
+    .modal-confirm-icon.icon-alert {
+        border-color: var(--accent);
+        color: var(--accent);
+        background-color: var(--accent-dim);
+    }
+
+    /* Ícone de fechar (✕) neutro */
+    .modal-confirm-icon.icon-close {
+        border-color: var(--border-mid);
+        color: var(--text-secondary);
+    }
+
+.modal-confirm h3 {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    font-family: 'IBM Plex Mono',monospace;
+}
+
+.modal-confirm p {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.6;
+    letter-spacing: .3px;
+}
+
+[data-theme="light"] .modal-confirm {
+    background-color: #eaecf0;
+    border-color: #a0a6b0;
+}
+
+    [data-theme="light"] .modal-confirm h3 {
+        color: #0a0c10;
+    }
+
+    [data-theme="light"] .modal-confirm p {
+        color: #2a3040;
+    }
+
+[data-theme="light"] .modal-confirm-icon {
+    background-color: #d4d8de;
+    color: #1c2028;
+    border-color: #a0a6b0;
+}
+
+.modal-confirm-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-confirm-cancel {
+    flex: 1;
+    padding: 10px;
+    background-color: var(--bg-inset);
+    border: 1px solid var(--border-subtle);
     color: var(--text-muted);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'IBM Plex Sans',sans-serif;
+    transition: all .15s;
+    letter-spacing: 1px;
 }
 
-    [data-theme="light"] .drum-item.selected {
-        color: var(--text-primary);
+    .btn-confirm-cancel:hover {
+        background-color: var(--bg-surface);
+        color: var(--text-secondary);
+        border-color: var(--border-mid);
     }
 
-[data-theme="light"] .drum-fade-top,
-[data-theme="light"] .drum-fade-bot {
-    background: linear-gradient(to bottom, var(--bg-inset), transparent);
+.btn-confirm-ok {
+    flex: 1;
+    padding: 10px;
+    background-color: rgba(226,6,19,.08);
+    border: 1px solid var(--accent-border);
+    color: #ff7070;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'IBM Plex Sans',sans-serif;
+    transition: all .15s;
+    letter-spacing: 1px;
 }
 
-[data-theme="light"] .drum-fade-bot {
-    background: linear-gradient(to top, var(--bg-inset), transparent);
-}
-
-[data-theme="light"] .drum-highlight {
-    border-color: var(--border-mid);
-}
-
-/* Válvulas no claro — SVG inline usa var() direto */
-[data-theme="light"] .valve-visual svg rect,
-/* ============================================================
-   A JUSTES FO CADOS NOS BOTÕES PRINCIPAIS E BADGES (MODO CLARO)
-   ============================================================ */
-/* 1. BOTÃO INICIAR (Estado padrão/Aguardando - Mais Vivo) */
-[data-theme="light"] .btn-start {
-    background-color: #fca5a5 !important; /* Vermelho coral vivo, mas sem ser o tom de ativo */
-    color: #991b1b !important; /* Texto em vermelho escuro para dar contraste total */
-    border: 1px solid #f87171 !important; /* Borda definida */
-    opacity: 1 !important; /* Remove qualquer opacidade que apague o botão */
-}
-
-/* 2. BOTÃO EMERGÊNCIA (Estado padrão - Mais nítido) */
-[data-theme="light"] .btn-emergency {
-    background-color: #fff1f2 !important; /* Fundo rosa bem sutil e limpo */
-    color: #e11d48 !important; /* Texto vermelho bem vivo e focado */
-    border: 1px solid #fecdd3 !important; /* Borda bem visível */
-}
-
-/* 3. CORRIGINDO O NOME DO OPERÁRIO (Badge de Identificação) */
-/* Coloca o fundo vermelho sutil que estava na primeira imagem da sua tela */
-[data-theme="light"] .usuario-badge {
-    background-color: rgba(214, 0, 28, 0.08) !important;
-    border: 1px solid rgba(214, 0, 28, 0.25) !important;
-    color: #b90015 !important; /* Texto em vermelho industrial legível */
-}
-
-/* 4. GARANTINDO O INTERRUPTOR (TOGGLE) MAIS SUAVE */
-/* Caso a bolinha ainda esteja muito chamativa, esse seletor fixa ela no tom escuro */
-[data-theme="light"] .theme-toggle-thumb {
-    background-color: #475569 !important; /* Cinza ardósia corporativo */
-}
+    .btn-confirm-ok:hover {
+        background-color: var(--accent-border);
+        color: #fff;
+    }
 
 /* ============================================================
-   CORREÇÃO CIRÚRGICA DA ABA DE ÓLEO (FINAL DO ARQUIVO)
+   RESPONSIVIDADE — altamente responsivo
    ============================================================ */
 
-/* 1. RESET: Força o fundo da aba de óleo e dos painéis a voltarem ao normal */
-[data-theme="light"] #oleo.tab-content {
-    background-color: #f1f5f9 !important; /* Devolve o fundo cinza claro */
-}
-
-[data-theme="light"] .op-oleo-tank-panel,
-[data-theme="light"] .op-oleo-status-panel {
-    background-color: #ffffff !important; /* Força os cards a ficarem brancos */
-    border: 1px solid #cbd5e1 !important;
-    color: #0f172a !important;
-}
-
-/* 2. LADO ESQUERDO: Pinta o líquido interno do Tanque */
-[data-theme="light"] #oilFill {
-    background-color: #ff1e27 !important; /* Vermelho vivo industrial */
-    background: #ff1e27 !important;
-}
-
-/* Texto da porcentagem do tanque (ex: 78%) */
-[data-theme="light"] #oilPercent {
-    color: #ff1e27 !important;
-    font-weight: 800 !important;
-}
-
-/* 3. LADO DIREITO: Pinta a Barra de Enchimento que estava escura */
-[data-theme="light"] .op-nivel-bar-fill {
-    background-color: #ff1e27 !important; /* Mesmo vermelho vivo industrial */
-    background: #ff1e27 !important;
-}
-
-/* Caixa da barra (fundo cinza sutil para dar contraste com o vermelho) */
-[data-theme="light"] .op-nivel-bar-track {
-    background-color: #e2e8f0 !important;
-    border: 1px solid #cbd5e1 !important;
-}
-
-/* Texto da porcentagem ao lado da barra */
-[data-theme="light"] .op-nivel-bar-val {
-    color: #0f172a !important; /* Preto/Grafite para não sumir no fundo */
-    font-weight: 700 !important;
-}
-
-/* Container/Card da válvula fechada */
-.valvula.fechada {
-    background-color: #ffeef0 !important; /* Fundo suave avermelhado */
-    border-color: #ff1e27 !important;
-}
-
-    /* O contorno oval do medidor */
-    .valvula.fechada .gauge-outline,
-    .valvula.fechada .gauge-capsule {
-        border-color: #ff1e27 !important;
-        color: #ff1e27 !important;
+/* Telas largas (>1400px) */
+@media (min-width: 1400px) {
+    .dashboard-unificado {
+        grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr) 240px;
     }
 
-    /* O texto do número interno (ex: 155deg) */
-    .valvula.fechada .gauge-text,
-    .valvula.fechada .gauge-value {
-        color: #ff1e27 !important;
+    .oleo-tank-section .tank {
+        width: 110px;
+        height: 150px;
+    }
+}
+
+/* Telas médias (1024px–1400px) */
+@media (max-width: 1400px) and (min-width: 1024px) {
+    .dashboard-unificado {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 200px;
     }
 
-    /* O botão/badge inferior escrito FECHADA */
-    .valvula.fechada .btn-status,
-    .valvula.fechada .badge-status {
-        background-color: #ff1e27 !important;
-        color: #ffffff !important; /* Texto branco para dar contraste */
-        border: none !important;
+    .btn-emergency {
+        height: 70px;
+        font-size: 12px;
     }
+
+    .chart-main-value {
+        font-size: 26px;
+    }
+
+    .valve-visual-modern {
+        width: 64px;
+        height: 64px;
+    }
+
+    .oleo-tank-section .tank {
+        width: 90px;
+        height: 120px;
+    }
+}
+
+/* Mobile grande (600px–768px) */
+@media (max-width: 768px) {
+    body {
+        padding: 5px 6px;
+    }
+
+    .header-logo-center {
+        height: 44px;
+    }
+
+    .header-title {
+        font-size: 16px;
+        letter-spacing: 2px;
+    }
+
+    .dashboard-unificado {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .zona-central {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .zona-valvulas {
+        grid-column: 1;
+        grid-row: 2;
+        flex-direction: column;
+    }
+
+    .zona-oleo {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
+    .zona-controles {
+        grid-column: 1;
+        grid-row: 4;
+    }
+
+    .op-metrics-row {
+        grid-template-columns: repeat(3,1fr);
+        gap: 4px;
+    }
+
+    .chart-main-value {
+        font-size: 24px;
+    }
+
+    .timer-value {
+        font-size: 22px;
+    }
+
+    .btn-emergency {
+        height: 56px;
+        font-size: 12px;
+        padding-left: 44px;
+        background-position: 20px center;
+    }
+
+    .valve-visual-modern {
+        width: 60px;
+        height: 60px;
+    }
+
+    .top-info {
+        font-size: 14px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}
+
+/* Mobile pequeno (<600px) */
+@media (max-width: 600px) {
+    .top-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .header-logo-center {
+        display: none;
+    }
+
+    .modal-content, .modal-confirm {
+        padding: 20px 16px;
+    }
+
+    .drum-wrapper {
+        width: 54px;
+    }
+}
+
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+    .dashboard-unificado {
+        grid-template-columns: 1fr 1fr 200px;
+        grid-template-rows: 1fr 1fr;
+    }
+
+    .chart-main-value {
+        font-size: 18px;
+    }
+
+    .timer-value {
+        font-size: 22px;
+    }
+
+    .btn-emergency {
+        height: 68px;
+        font-size: 12px;
+    }
+
+    .oleo-tank-section .tank {
+        width: 60px;
+        height: 85px;
+    }
+}
+
+/* ============================================================
+   PATCH — correção de overflow no óleo + válvulas maiores
+   ============================================================ */
+
+/* TANQUE DE ÓLEO: para de vazar pra fora do painel */
+.zona-oleo {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.oleo-grid-unificado {
+    min-height: 0;
+}
+
+.oleo-tank-section {
+    min-height: 0;
+    overflow: hidden;
+}
+
+    .oleo-tank-section .tank {
+        width: clamp(60px, 7vw, 90px);
+        height: clamp(80px, 16vh, 140px); /* antes vinha de valores fixos que furavam o painel */
+        flex-shrink: 0;
+    }
+
+.oleo-status-section,
+.oleo-indicators-section {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* VÁLVULAS: ícone e dados maiores, sem espaço vazio sobrando */
+.valve-compacta {
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.valve-content-wrapper {
+    align-items: center;
+}
+
+.valve-visual-modern {
+    width: clamp(90px, 11vw, 140px);
+    height: clamp(90px, 11vw, 140px);
+}
+
+.valve-num {
+    font-size: clamp(13px, 1.2vw, 16px);
+}
+
+.data-field {
+    padding: 8px 12px;
+    min-height: 30px;
+}
+
+    .data-field .data-label {
+        font-size: clamp(10px, .95vw, 11px);
+    }
+
+    .data-field .data-value {
+        font-size: clamp(10px, 1.3vw, 14px);
+    }
+
+.servo-button {
+    font-size: clamp(11px, 1vw, 13px);
+    padding: 10px 0;
+}
+
+/* FONTES GERAIS MAIORES */
+.section-title {
+    font-size: clamp(11px, 1vw, 13px) !important;
+}
+
+.status-label, .timer-label {
+    font-size: clamp(10px, .9vw, 12px) !important;
+}
+
+.status-value {
+    font-size: clamp(18px, 2vw, 24px) !important;
+}
+
+.timer-value {
+    font-size: clamp(26px, 2.8vw, 34px);
+}
+
+.chart-main-value {
+    font-size: clamp(26px, 3vw, 36px);
+}
+
+.op-metric-value {
+    font-size: clamp(16px, 1.6vw, 21px);
+}
+
+.op-oleo-ind-val {
+    font-size: clamp(13px, 1.3vw, 16px);
+}
+
+.btn {
+    font-size: clamp(12px, 1.1vw, 14px);
+}
+
+.btn-emergency {
+    font-size: clamp(13px, 1.2vw, 15px);
+}
+
+/* FORCE TANK FIX */
+.oleo-tank-section {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+}
+
+    .oleo-tank-section .tank {
+        width: 140px !important;
+        height: 220px !important;
+        border: 3px solid #ff0011 !important;
+        border-radius: 8px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        background: var(--bg-inset) !important;
+        flex-shrink: 0 !important;
+    }
+
+/* FORCE NIVEL BAR FIX FINAL v3 AGORA VAI */
+.op-nivel-bar-track {
+    height: 48px !important;
+}
+
+.op-nivel-bar-section {
+    min-height: 60px !important;
+}
+
+.op-nivel-bar-fill {
+    height: 100% !important;
+}
+
+.op-nivel-bar-val {
+    position: absolute !important;
+    inset: 0 !important;
+    transform: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    color: unset !important;
+    z-index: 10 !important;
+}
+
+/* ==========================================================================
+   FORCE FIX — TEMA CLARO NEUTRO E FONTES LIGEIRAMENTE MENORES
+   ========================================================================== */
+
+[data-theme="light"] {
+    --bg-root: #F0F0F0;
+    --bg-panel: #FAFAFA;
+    --bg-surface: #E0E0E0;
+    --bg-inset: #D4D4D4;
+    --border-subtle: #C0C0C0;
+    --border-mid: #B0B0B0;
+    --text-primary: #101010;
+    --text-secondary: #404040;
+    --text-muted: #707070;
+    --timer-color: #101010;
+    --chart-line: #101010;
+    --label-title: #0a0c10;
+    --label-section: #101010;
+    --label-status: #202020;
+}
+
+    [data-theme="light"] .mangueira-button[aria-pressed="true"] .tubo-nome {
+        color: #101010 !important;
+    }
+
+    [data-theme="light"] .mangueira-button[aria-pressed="true"] .tubo-status::after {
+        color: #0d5c1e !important;
+    }
+
+    [data-theme="light"] .btn-start:not(:disabled):not(.iniciado) {
+        background-color: #101010 !important;
+        color: #F0F0F0 !important;
+        border: 2px solid #101010 !important;
+        box-shadow: 0 0 14px rgba(16,16,16,0.35) !important;
+    }
+
+        [data-theme="light"] .btn-start:not(:disabled):not(.iniciado):hover {
+            background-color: #2a2a2a !important;
+        }
+
+/* ===== FORCE FIX LIGHT GREEN ===== */
+[data-theme="light"] {
+    --green: #4eca60 !important;
+    --green-bg: rgba(78,202,96,.08) !important;
+    --green-border: #1a4220 !important;
+    --valve-open: #4eca60 !important;
+    --role-badge-text: #4eca60 !important;
+    --role-badge-bg: rgba(78,202,96,.08) !important;
+    --role-badge-border: #1a4220 !important;
+}
+
+    [data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-handle,
+    [data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-body-circle {
+        border-color: #1aa13a !important;
+        stroke: #4eca60 !important;
+    }
+
+    [data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-neck {
+        border-color: #1aa13a !important;
+        stroke: #4eca60 !important;
+    }
+
+    [data-theme="light"] .valve-compacta:has(.servo-button.aberto) .valve-center-text {
+        fill: #1F7D35 !important;
+        border-color: #1aa13a !important;
+    }
+
+    [data-theme="light"] .servo-button.aberto {
+        background-color: #22c54e !important;
+        border-color: #1aa13a !important;
+        box-shadow: 0 0 10px rgba(34,197,78,.2) !important;
+    }
+
+        [data-theme="light"] .servo-button.aberto:hover {
+            background-color: #1aa13a !important;
+        }
+
+    [data-theme="light"] .op-sema-item.ok {
+        color: #4eca60 !important;
+        border-color: #1a4220 !important;
+        background-color: rgba(78,202,96,.08) !important;
+    }
+
+        [data-theme="light"] .op-sema-item.ok .op-sema-dot {
+            background-color: #4eca60 !important;
+        }
+
+
+/* ===== END FORCE FIX ===== */

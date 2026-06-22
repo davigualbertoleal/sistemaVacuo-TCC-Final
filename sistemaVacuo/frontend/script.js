@@ -4,7 +4,7 @@
 //  API retorna valores em mBar (float)
 // =============================================
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = `http://${window.location.hostname}:5000/api`;
 
 let usuarioAtual = null;
 let timerInterval = null;

@@ -1,8 +1,9 @@
 // =============================================
 //  SCRIPT OPERADOR - Sistema de Vacuo (TSEA ENERGY)
+//  v3 — com fallback de simulacao quando API/ESP32 indisponivel
 // =============================================
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = `http://${window.location.hostname}:5000/api`;
 
 let usuarioAtual = null;
 let cicloAtualId = 1;
@@ -20,7 +21,15 @@ let tempCoolingStarted = false;
 let dadosOleo = { pressao: 0, temperatura: 60, nivel: 0 };
 
 const mangueiras = { 1: false, 2: false, 3: false };
-const servos = { 1: 155, 2: 155, 3: 155 };
+
+// =============================================
+//  SERVOS — angulos espelham config.h do ESP32
+//  SERVO_MIN_ANGLE = 0  (fechado)
+//  SERVO_MAX_ANGLE = 90 (aberto)
+// =============================================
+const SERVO_ABERTO = 90;
+const SERVO_FECHADO = 0;
+const servos = { 1: SERVO_FECHADO, 2: SERVO_FECHADO, 3: SERVO_FECHADO };
 
 let dadosAtual = null;
 
@@ -31,9 +40,75 @@ const SENSOR_MBAR_MIN = -150;
 const SENSOR_MBAR_MAX = 10;
 
 // =============================================
-//  CONVERSAO PA -> mBar
+//  MODO SIMULACAO
+//  Ativado automaticamente quando API ou ESP32
+//  retornam erro / timeout / 404
 // =============================================
-function paParaMbar(pa) { return pa * 0.01; }
+let modoSimulacao = false;
+let simPressaoCamara = -2;          // começa em -2 mBar e desce
+let simPressaoTubos = [-2, -2, -2]; // idem por tubo
+let simFluxos = [0, 0, 0];
+let simIntervalo = null;
+
+const SIM_ALVO = -60;  // mBar — patamar de estabilizacao
+const SIM_NOISE = 0.8;  // flutuacao apos estabilizar
+
+function simDescida(atual) {
+    if (atual > -30) {
+        // Fase 1: queda rapida de -2 ate -30
+        return atual - (8 + Math.random() * 4);
+    } else if (atual > SIM_ALVO) {
+        // Fase 2: desacelera, ~5 mBar por tick
+        const dist = Math.abs(SIM_ALVO - atual);
+        const passo = Math.min(5 + Math.random() * 1.5, dist);
+        return atual - passo;
+    } else {
+        // Estabilizado: pequena flutuacao realista
+        return SIM_ALVO + (Math.random() * SIM_NOISE * 2 - SIM_NOISE);
+    }
+}
+
+function ativarModoSimulacao(motivo) {
+    if (modoSimulacao) return;
+    modoSimulacao = true;
+    console.warn('[SIM]', motivo);
+}
+
+// Gera leitura simulada para um ciclo ativo
+function gerarDadosSimulados() {
+    // Descida com curva realista
+    simPressaoCamara = simDescida(simPressaoCamara);
+
+    for (let i = 0; i < 3; i++) {
+        if (servos[i + 1] === SERVO_ABERTO) {
+            simPressaoTubos[i] = simDescida(simPressaoTubos[i]);
+            simFluxos[i] = parseFloat((1.2 + Math.random() * 0.6).toFixed(2));
+        } else {
+            simPressaoTubos[i] = 0;
+            simFluxos[i] = 0;
+        }
+    }
+
+    return {
+        pressaoCamaraMbar: parseFloat(simPressaoCamara.toFixed(2)),
+        pressaoTubo1Mbar: parseFloat(simPressaoTubos[0].toFixed(1)),
+        pressaoTubo2Mbar: parseFloat(simPressaoTubos[1].toFixed(1)),
+        pressaoTubo3Mbar: parseFloat(simPressaoTubos[2].toFixed(1)),
+        fluxoTubo1LPM: simFluxos[0],
+        fluxoTubo2LPM: simFluxos[1],
+        fluxoTubo3LPM: simFluxos[2],
+        temperaturaOleo: dadosOleo.temperatura,
+        bombaLigada: true,
+        estadoMaquina: 'Simulado',
+        servoAngulo: servos[1]
+    };
+}
+
+function resetarSimulacao() {
+    simPressaoCamara = -2;
+    simPressaoTubos = [-2, -2, -2];
+    simFluxos = [0, 0, 0];
+}
 
 // =============================================
 //  STORAGE SEGURO
@@ -50,7 +125,22 @@ document.addEventListener('DOMContentLoaded', () => {
     configurarToggleTema();
     setInterval(atualizarRelogio, 1000);
     atualizarRelogio();
+
+    ajustarZoomWebView();
+    window.addEventListener('resize', ajustarZoomWebView);
 });
+
+function ajustarZoomWebView() {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    if (W <= 1366 && H <= 768) {
+        document.documentElement.style.zoom = '0.89';
+        document.body.style.zoom = '1';
+    } else {
+        document.documentElement.style.zoom = '1';
+        document.body.style.zoom = '1';
+    }
+}
 
 // =============================================
 //  TEMA
@@ -96,7 +186,6 @@ window.addEventListener('load', () => {
         window.chrome.webview.postMessage('dashboard_pronto');
 });
 
-// Recebe o ID real do ciclo do banco (chamado pelo C# apos IniciarNovoCiclo)
 function receberCicloId(id) {
     cicloAtualId = id;
     console.log('Ciclo ID recebido do banco:', cicloAtualId);
@@ -114,7 +203,9 @@ function receberContextoUsuario(id, nome, papel) {
     if (el) el.textContent = `${id}  —  ${nome}`;
     if (!dashboardCarregado) {
         dashboardCarregado = true;
-        esperarChartJS(inicializarDashboard);
+        esperarChartJS(() => {
+            setTimeout(inicializarDashboard, 300);
+        });
     }
 }
 
@@ -122,7 +213,6 @@ function receberContextoUsuario(id, nome, papel) {
 //  INICIALIZAR DASHBOARD
 // =============================================
 function inicializarDashboard() {
-    configurarAbas();
     configurarMangueiras();
     configurarServos();
     inicializarGrafico();
@@ -140,28 +230,13 @@ function mostrarDadosIniciais() {
         if (el) el.textContent = '--';
     });
     const faseEl = document.getElementById('faseDisplay');
-    if (faseEl) { faseEl.textContent = 'AGUARDANDO INICIO'; faseEl.className = 'fase-badge aguard'; }
+    if (faseEl) { faseEl.textContent = 'AGUARDANDO INÍCIO'; faseEl.className = 'fase-badge aguard'; }
     const timerEl = document.getElementById('timerDisplay');
     if (timerEl) timerEl.textContent = '00:00:00';
     const limEl = document.getElementById('timerLimit');
     if (limEl) limEl.textContent = '';
     const stEl = document.getElementById('status-estado');
     if (stEl) { stEl.textContent = 'AGUARDANDO'; stEl.className = 'status-value'; }
-}
-
-// =============================================
-//  ABAS
-// =============================================
-function configurarAbas() {
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.getAttribute('data-tab');
-            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tab)?.classList.add('active');
-        });
-    });
 }
 
 // =============================================
@@ -173,8 +248,9 @@ function configurarMangueiras() {
             if (modoEmergencia) return;
             const num = btn.getAttribute('data-mangueira');
             mangueiras[num] = !mangueiras[num];
-            btn.classList.toggle('conectada', mangueiras[num]);
-            btn.textContent = `Tubo ${num}`;
+            const conectada = mangueiras[num];
+            btn.setAttribute('aria-pressed', conectada ? 'true' : 'false');
+            btn.classList.toggle('conectada', conectada);
             validarMangueiras();
         });
     });
@@ -183,26 +259,70 @@ function configurarMangueiras() {
 function validarMangueiras() { validarBotaoIniciar(); }
 
 // =============================================
-//  SERVOS
+//  SERVOS — integracao com API
 // =============================================
 function configurarServos() {
     document.querySelectorAll('.servo-button').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (modoEmergencia) return;
-            const num = btn.getAttribute('data-servo');
-            servos[num] = servos[num] === 80 ? 155 : 80;
+            const num = btn.dataset.servo;
+            if (servos[num] === SERVO_ABERTO) {
+                servos[num] = SERVO_FECHADO;
+            } else {
+                servos[num] = SERVO_ABERTO;
+            }
             atualizarValvulaVisual(num, servos[num]);
         });
     });
 }
 
-function validarBotaoIniciar() {
-    if (modoEmergencia) return;
-    const btnIniciar = document.getElementById('btnIniciar');
-    if (!btnIniciar) return;
-    const umConectado = mangueiras[1] || mangueiras[2] || mangueiras[3];
-    const umaAberta = servos[1] === 80 || servos[2] === 80 || servos[3] === 80;
-    btnIniciar.disabled = !(umConectado && umaAberta);
+async function enviarComandoServo(num, angulo) {
+    if (modoSimulacao) {
+        // Em modo simulacao: apenas atualiza estado local
+        servos[num] = angulo;
+        atualizarValvulaVisual(num, angulo);
+        validarBotaoIniciar();
+        return;
+    }
+
+    const btn = document.getElementById(`btnServo${num}`);
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+    try {
+        const res = await fetch(`${API_URL}/servo/comando`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cicloId: cicloAtualId,
+                angulo,
+                origem: 'Dashboard-Operador'
+            })
+        });
+
+        if (res.ok) {
+            servos[num] = angulo;
+            atualizarValvulaVisual(num, angulo);
+            validarBotaoIniciar();
+        } else {
+            console.warn(`Erro ao enviar comando servo ${num}:`, res.status);
+        }
+    } catch (err) {
+        console.warn(`Falha ao comunicar com API (servo ${num}):`, err.message);
+        ativarModoSimulacao('Falha no comando servo');
+        servos[num] = angulo;
+        atualizarValvulaVisual(num, angulo);
+        validarBotaoIniciar();
+    } finally {
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    }
+}
+
+async function fecharTodosServosEmergencia() {
+    if (modoSimulacao) {
+        [1, 2, 3].forEach(n => { servos[n] = SERVO_FECHADO; atualizarValvulaVisual(n, SERVO_FECHADO); });
+        return;
+    }
+    const promises = [1, 2, 3].map(n => enviarComandoServo(n, SERVO_FECHADO));
+    await Promise.allSettled(promises);
 }
 
 // =============================================
@@ -238,6 +358,7 @@ function fazerLogout() {
     usuarioAtual = null;
     dashboardCarregado = false;
     modoEmergencia = false;
+    modoSimulacao = false;
     try {
         localStorage.removeItem('usuarioId');
         localStorage.removeItem('usuarioNome');
@@ -324,31 +445,56 @@ function confirmarTimer() {
 }
 
 // =============================================
+//  VALIDAR BOTAO INICIAR
+// =============================================
+function validarBotaoIniciar() {
+    if (modoEmergencia) return;
+    const btnIniciar = document.getElementById('btnIniciar');
+    if (!btnIniciar) return;
+    const umConectado = mangueiras[1] || mangueiras[2] || mangueiras[3];
+    const umaAberta = servos[1] === SERVO_ABERTO || servos[2] === SERVO_ABERTO || servos[3] === SERVO_ABERTO;
+    btnIniciar.disabled = !(umConectado && umaAberta);
+}
+
+// =============================================
 //  PROCESSO E TIMER
 // =============================================
 async function iniciarProcesso() {
+
+    const btn = document.getElementById('btnIniciar');
+    if (btn) {
+        btn.classList.remove('desativado');
+        btn.classList.add('iniciado');
+        btn.textContent = 'INICIADO';
+    }
+
     if (!mangueiras[1] && !mangueiras[2] && !mangueiras[3]) { alert('Conecte pelo menos 1 tubo para iniciar!'); return; }
-    if (servos[1] !== 80 && servos[2] !== 80 && servos[3] !== 80) { alert('Abra pelo menos 1 valvula para iniciar!'); return; }
+    if (servos[1] !== SERVO_ABERTO && servos[2] !== SERVO_ABERTO && servos[3] !== SERVO_ABERTO) { alert('Abra pelo menos 1 valvula para iniciar!'); return; }
 
     processoEmAndamento = true;
     tempoDecorrido = 0;
     nivelCheio = false;
     tempCoolingStarted = false;
+    resetarSimulacao();
 
-    // Registra o ciclo na API e dispara o email
-    try {
-        const res = await fetch(`${API_URL}/ciclo/iniciar`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ operadorId: parseInt(usuarioAtual) || 0 })
-        });
-        if (res.ok) {
-            const data = await res.json();
-            cicloAtualId = data.cicloId;
-            console.log('Ciclo registrado:', cicloAtualId);
+    // Tenta registrar ciclo na API — ativa simulacao se falhar
+    if (!modoSimulacao) {
+        try {
+            const res = await fetch(`${API_URL}/ciclo/iniciar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ operadorId: parseInt(usuarioAtual) || 0 })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                cicloAtualId = data.cicloId;
+                console.log('Ciclo registrado:', cicloAtualId);
+            } else {
+                ativarModoSimulacao('API retornou ' + res.status);
+            }
+        } catch (err) {
+            ativarModoSimulacao('API inacessivel: ' + err.message);
         }
-    } catch (err) {
-        console.warn('Erro ao registrar ciclo:', err.message);
     }
 
     dadosOleo = { pressao: 0, temperatura: 60, nivel: 0 };
@@ -358,9 +504,9 @@ async function iniciarProcesso() {
     const btnI = document.getElementById('btnIniciar');
     if (btnI) btnI.disabled = true;
 
-    document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
+    document.querySelectorAll('.mangueira-button, .servo-button').forEach(b => {
+        b.disabled = true;
+        b.style.opacity = '0.5';
     });
 
     const stEl = document.getElementById('status-estado');
@@ -376,7 +522,11 @@ async function iniciarProcesso() {
         timerEl.textContent = `${lh}:${lm}:${ls}`;
     }
 
-    if (window.vacuoChart) { window.vacuoChart.data.labels = []; window.vacuoChart.data.datasets[0].data = []; window.vacuoChart.update(); }
+    if (window.vacuoChart) {
+        window.vacuoChart.data.labels = [];
+        window.vacuoChart.data.datasets[0].data = [];
+        window.vacuoChart.update();
+    }
 
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -417,8 +567,7 @@ function pararProcesso(motivo = null) {
     if (window.apiInterval) clearInterval(window.apiInterval);
     pararSimulacaoOleo();
 
-    // Encerra o ciclo na API
-    if (cicloAtualId) {
+    if (cicloAtualId && !modoSimulacao) {
         const url = motivo
             ? `${API_URL}/ciclo/${cicloAtualId}/parar?motivo=${motivo}`
             : `${API_URL}/ciclo/${cicloAtualId}/parar`;
@@ -429,9 +578,9 @@ function pararProcesso(motivo = null) {
     if (btnI) btnI.disabled = false;
 
     if (!modoEmergencia) {
-        document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
-            btn.disabled = false;
-            btn.style.opacity = '';
+        document.querySelectorAll('.mangueira-button, .servo-button').forEach(b => {
+            b.disabled = false;
+            b.style.opacity = '';
         });
     }
 
@@ -455,10 +604,10 @@ async function acionarEmergencia() {
     if (!processoEmAndamento) return;
 
     modoEmergencia = true;
-    pararProcesso("EMERGENCIA");
+    pararProcesso('EMERGENCIA');
     pararSimulacaoOleo();
 
-    // Gera e envia o PDF de emergencia para o S3
+    await fecharTodosServosEmergencia();
     await gerarRelatorioPDF(true);
 
     const stEl = document.getElementById('status-estado');
@@ -468,12 +617,10 @@ async function acionarEmergencia() {
     const limEl = document.getElementById('timerLimit');
     if (limEl) limEl.textContent = 'PARADO — EMERGENCIA';
 
-    [1, 2, 3].forEach(n => { servos[n] = 155; atualizarValvulaVisual(n, 155); });
-
-    document.querySelectorAll('.mangueira-button, .servo-button').forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.3';
-        btn.style.cursor = 'not-allowed';
+    document.querySelectorAll('.mangueira-button, .servo-button').forEach(b => {
+        b.disabled = true;
+        b.style.opacity = '0.3';
+        b.style.cursor = 'not-allowed';
     });
 
     const faseEl = document.getElementById('faseDisplay');
@@ -487,6 +634,7 @@ async function acionarEmergencia() {
 }
 
 async function enviarEmergenciaAPI() {
+    if (modoSimulacao) return;
     try {
         await fetch(`${API_URL}/emergencia`, {
             method: 'POST',
@@ -508,35 +656,32 @@ function atualizarStatusValvulas() {
 }
 
 function atualizarValvulaVisual(num, angulo) {
-    const isAberta = angulo <= 100;
-    const tema = document.documentElement.getAttribute('data-theme') || 'dark';
-    const corHex = isAberta
-        ? (tema === 'light' ? '#1a6e2a' : '#4eca60')
-        : (tema === 'light' ? '#d0000a' : '#e20613');
+    const isAberta = angulo === SERVO_ABERTO;
 
-    const statusEl = document.getElementById(`valveStatus${num}`);
-    if (statusEl) { statusEl.textContent = isAberta ? 'ABERTA' : 'FECHADA'; statusEl.className = 'valve-status ' + (isAberta ? 'on' : 'off'); }
+    const btn = document.getElementById(`btnServo${num}`);
+    if (btn) {
+        btn.textContent = isAberta ? 'ABERTA - Aperte para Fechar' : 'FECHADA - Aperte para Abrir';
+        btn.classList.toggle('aberto', isAberta);
+        btn.classList.toggle('fechado', !isAberta);
+    }
 
     const visual = document.getElementById(`valveVisual${num}`);
     if (visual) {
-        visual.classList.toggle('aberta', isAberta);
-        visual.classList.toggle('fechada', !isAberta);
         const svg = visual.querySelector('svg');
         if (svg) {
-            svg.querySelectorAll('rect, line').forEach(el => el.style.stroke = corHex);
-            svg.querySelectorAll('text').forEach(el => el.style.fill = corHex);
+            svg.querySelectorAll('rect, circle, line').forEach(el => {
+                el.style.stroke = '';
+                el.style.fill = '';
+            });
+            svg.querySelectorAll('text').forEach(el => el.style.fill = '');
+
             const angleEl = svg.querySelector(`#valveAngle${num}`);
-            if (angleEl) angleEl.textContent = angulo + 'deg';
-            const indEl = svg.querySelector(`#valveIndicator${num}`);
-            if (indEl) indEl.style.transform = `rotate(${angulo}deg)`;
+            if (angleEl) angleEl.textContent = angulo + '°';
         }
     }
 
-    const btn = document.getElementById(`btnServo${num}`);
-    if (btn) btn.textContent = isAberta ? 'ABERTA' : 'FECHADA';
-
     const angleTxt = document.getElementById(`valveAngleTxt${num}`);
-    if (angleTxt) angleTxt.textContent = angulo + 'deg';
+    if (angleTxt) angleTxt.textContent = angulo + '°';
 
     validarBotaoIniciar();
 }
@@ -589,19 +734,53 @@ function inicializarGraficoOleo() {
 }
 
 // =============================================
-//  POLLING DA API
+//  POLLING DA API — com fallback p/ simulacao
 // =============================================
 async function buscarDados() {
-    try {
-        const res = await fetch(`${API_URL}/leiturasSensores?limit=1`);
-        if (!res.ok) return;
-        const leituras = await res.json();
-        if (!leituras?.length) return;
-        const l = leituras[0];
+    // Modo simulacao: gera dados localmente sem chamar a API
+    if (modoSimulacao) {
+        if (!processoEmAndamento) return;
+        dadosAtual = gerarDadosSimulados();
+        atualizarPrincipal(dadosAtual);
+        atualizarValvulasDados(dadosAtual);
+        return;
+    }
 
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+
+        const res = await fetch(`${API_URL}/leiturasSensores?limit=1`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        // 404 ou qualquer erro HTTP = ESP32 nao encontrado
+        if (!res.ok) {
+            ativarModoSimulacao('HTTP ' + res.status + ' em /leiturasSensores');
+            if (processoEmAndamento) {
+                dadosAtual = gerarDadosSimulados();
+                atualizarPrincipal(dadosAtual);
+                atualizarValvulasDados(dadosAtual);
+            }
+            return;
+        }
+
+        const leituras = await res.json();
+        if (!leituras?.length) {
+            // Endpoint respondeu mas sem dados — usa simulacao por esta rodada
+            if (processoEmAndamento) {
+                dadosAtual = gerarDadosSimulados();
+                atualizarPrincipal(dadosAtual);
+                atualizarValvulasDados(dadosAtual);
+            }
+            return;
+        }
+
+        const l = leituras[0];
         const toMbar = v => {
             const n = parseFloat(v) || 0;
-            return Math.abs(n) > 100 ? paParaMbar(n) : n;
+            return Math.abs(n) > 100 ? (n * 0.01) : n;
         };
 
         dadosAtual = {
@@ -620,7 +799,16 @@ async function buscarDados() {
 
         if (processoEmAndamento) atualizarPrincipal(dadosAtual);
         atualizarValvulasDados(dadosAtual);
-    } catch { }
+
+    } catch (err) {
+        // Timeout ou falha de rede
+        ativarModoSimulacao('Erro de rede: ' + (err.name === 'AbortError' ? 'timeout' : err.message));
+        if (processoEmAndamento) {
+            dadosAtual = gerarDadosSimulados();
+            atualizarPrincipal(dadosAtual);
+            atualizarValvulasDados(dadosAtual);
+        }
+    }
 }
 
 // =============================================
@@ -641,9 +829,9 @@ function atualizarPrincipal(d) {
     const faseEl = document.getElementById('faseDisplay');
     if (faseEl && !modoEmergencia) {
         let texto, cls;
-        if (p < -600) { texto = 'SUCCAO ATIVA'; cls = 'succao'; }
-        else if (p <= -200) { texto = 'PRESSAO ESTAVEL'; cls = 'estavel'; }
-        else { texto = 'PRESSAO BAIXA'; cls = 'aguard'; }
+        if (p < -60) { texto = 'SUCÇÃO ATIVA'; cls = 'succao'; }
+        else if (p <= -20) { texto = 'PRESSÃO ESTÁVEL'; cls = 'estavel'; }
+        else { texto = 'PRESSÃO BAIXA'; cls = 'aguard'; }
         faseEl.textContent = texto;
         faseEl.className = 'fase-badge ' + cls;
     }
@@ -701,9 +889,11 @@ function iniciarSimulacaoOleo() {
             dadosOleo.temperatura = 60 + (Math.random() * 0.4 - 0.2);
         } else {
             const tempoResfriando = tempoDecorrido - tempoNivelCheio;
-            if (tempoResfriando <= 0) { dadosOleo.temperatura = 60; }
-            else if (tempoResfriando >= duracaoResfriamento) { dadosOleo.temperatura = 25; }
-            else {
+            if (tempoResfriando <= 0) {
+                dadosOleo.temperatura = 60;
+            } else if (tempoResfriando >= duracaoResfriamento) {
+                dadosOleo.temperatura = 25;
+            } else {
                 const prog = tempoResfriando / duracaoResfriamento;
                 dadosOleo.temperatura = Math.max(25, 60 - (35 * prog) + (Math.random() * 0.4 - 0.2));
             }
@@ -738,11 +928,15 @@ function atualizarOleoUI() {
     const bFill = document.getElementById('nivelBarFill');
     const bVal = document.getElementById('nivelBarVal');
     if (bFill) bFill.style.width = nivel + '%';
-    if (bVal) bVal.textContent = nivel.toFixed(0) + '%';
+    if (bVal) {
+        bVal.textContent = nivel.toFixed(0) + '%';
+        const barWidth = nivel;
+        bVal.style.setProperty('color', barWidth >= 50 ? '#ffffff' : '#101010', 'important');
+    }
 
     const tempRatio = Math.max(0, Math.min(1, (temperatura - 25) / 35));
     const r = Math.round(107 + (189 - 107) * tempRatio);
-    if (oilFill) oilFill.style.background = `linear-gradient(to top, rgb(${Math.max(60, r - 30)},2,2), rgb(${Math.min(255, r + 30)},2,2))`;
+    if (oilFill) oilFill.style.background = '#e20613';
 
     const filtroEstado = nivel < 30 ? 'CRITICO' : nivel < 60 ? 'ATENCAO' : 'NORMAL';
     const filtroClasse = nivel < 30 ? 'crit' : nivel < 60 ? 'warn' : 'ok';
@@ -835,12 +1029,13 @@ function desenharGraficoPDF(doc, x, y, w, h, labels, values, yMin, yMax, titulo,
 //  HELPER: ENVIAR PDF PARA API
 // =============================================
 async function enviarPDFParaAPI(doc, filename) {
+    if (modoSimulacao) return;
     try {
         const pdfBlob = doc.output('blob');
         const formData = new FormData();
         formData.append('file', pdfBlob, filename);
         const response = await fetch(`${API_URL}/relatorios/upload`, { method: 'POST', body: formData });
-        if (response.ok) { const data = await response.json(); console.log('PDF enviado para S3:', filename); }
+        if (response.ok) { console.log('PDF enviado para S3:', filename); }
         else console.warn('Falha ao enviar PDF:', response.status);
     } catch (err) { console.warn('Erro ao enviar PDF (ignorado):', err.message); }
 }
